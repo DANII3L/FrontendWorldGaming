@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import DynamicForm from '../../shared/components/ui/DynamicForm';
-import { IFieldConfig } from '../../shared/interface/IFieldConfig';
-import '../../shared/styles/ModalDynamicForm.css';
+import DynamicForm, { FormField } from '../../shared/components/ui/DynamicForm';
+import { register } from '../service/segServices';
+import { useNotification } from '../../shared/components/ui/UnifiedNotificationSystem';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -12,18 +12,27 @@ interface RegisterModalProps {
 
 const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitchToLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { addNotification } = useNotification();
 
-  const fields: IFieldConfig[] = [
+  const fields: FormField[] = [
     {
-      name: 'name',
-      label: 'Nombre Completo',
+      name: 'Nombre',
+      label: 'Nombre',
       type: 'text',
       required: true,
-      placeholder: 'Tu nombre completo',
-      colSpan: 2
+      placeholder: 'Tu nombre',
+      colSpan: 1
     },
     {
-      name: 'email',
+      name: 'Apellidos',
+      label: 'Apellidos',
+      type: 'text',
+      required: true,
+      placeholder: 'Tus apellidos',
+      colSpan: 1
+    },
+    {
+      name: 'Correo',
       label: 'Correo Electrónico',
       type: 'email',
       required: true,
@@ -31,13 +40,28 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
       colSpan: 2
     },
     {
-      name: 'password',
+      name: 'Telefono',
+      label: 'Teléfono',
+      type: 'phone',
+      placeholder: 'Número de teléfono',
+      colSpan: 2
+    },
+    {
+      name: 'Identificacion',
+      label: 'Identificación',
+      type: 'text',
+      placeholder: 'Número de identificación',
+      colSpan: 2
+    },
+    {
+      name: 'Password',
       label: 'Contraseña',
       type: 'password',
       required: true,
       placeholder: '••••••••',
-      minLength: 6,
-      colSpan: 1
+      minLength: 8,
+      colSpan: 1,
+      showPasswordRules: true
     },
     {
       name: 'confirmPassword',
@@ -51,26 +75,81 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
   ];
 
   const initialValues = {
-    name: '',
-    email: '',
-    password: '',
+    Nombre: '',
+    Apellidos: '',
+    Correo: '',
+    Password: '',
+    Telefono: '',
+    Identificacion: '',
     confirmPassword: ''
   };
 
+
+  const validatePassword = (password: string): { isValid: boolean; message?: string } => {
+    const rules = [
+      { test: password.length >= 8, message: 'La contraseña debe tener al menos 8 caracteres' },
+      { test: /[A-Z]/.test(password), message: 'La contraseña debe contener al menos una letra mayúscula' },
+      { test: /[a-z]/.test(password), message: 'La contraseña debe contener al menos una letra minúscula' },
+      { test: /\d/.test(password), message: 'La contraseña debe contener al menos un número' },
+      { test: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password), message: 'La contraseña debe contener al menos un carácter especial' }
+    ];
+
+    const failedRule = rules.find(rule => !rule.test);
+    return {
+      isValid: !failedRule,
+      message: failedRule?.message
+    };
+  };
+
   const handleSubmit = async (values: Record<string, any>) => {
-    if (values.password !== values.confirmPassword) {
-      alert('Las contraseñas no coinciden');
+    // Validar campos requeridos
+    if (!values.Nombre || !values.Apellidos || !values.Correo || !values.Password) {
+      addNotification('Por favor completa todos los campos obligatorios', 'warning');
       return;
     }
-    
+
+    // Validar contraseña
+    const passwordValidation = validatePassword(values.Password);
+    if (!passwordValidation.isValid) {
+      addNotification(passwordValidation.message || 'Contraseña inválida', 'error');
+      return;
+    }
+
+    // Validar que las contraseñas coincidan
+    if (values.Password !== values.confirmPassword) {
+      addNotification('Las contraseñas no coinciden', 'error');
+      return;
+    }
+
     setIsLoading(true);
-    
-    // Simular proceso de registro
-    setTimeout(() => {
+
+    try {
+      // Preparar datos para envío
+      const userData = {
+        Nombre: values.Nombre,
+        Apellidos: values.Apellidos,
+        Correo: values.Correo,
+        Password: values.Password,
+        Telefono: values.Telefono || null,
+        Identificacion: values.Identificacion || null
+      };
+
+      // Llamar al servicio de registro
+      const response = await register(userData);
+      
       setIsLoading(false);
-      console.log('Register values:', values);
-      // Aquí iría la lógica real de registro
-    }, 2000);
+      
+      if (response.success) {
+        addNotification('¡Cuenta creada exitosamente! Ya puedes iniciar sesión.', 'success');
+        onClose(); // Cerrar el modal después del registro exitoso
+      } else {
+        addNotification(response.message || 'Error al crear la cuenta. Por favor intenta de nuevo.', 'error');
+      }
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Error en el registro:', error);
+      addNotification('Error al crear la cuenta. Por favor intenta de nuevo.', 'error');
+    }
   };
 
   if (!isOpen) return null;
@@ -78,7 +157,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Overlay con efecto de partículas estelares */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       >
@@ -100,7 +179,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
       </div>
 
       {/* Modal */}
-      <div className="relative w-full max-w-md mx-4">
+      <div className="relative w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
           {/* Header del Modal */}
           <div className="relative p-8 text-center">
@@ -128,80 +207,82 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
             </p>
           </div>
 
-                     {/* Formulario */}
-           <div className="px-8 pb-8">
-             <DynamicForm
-               fields={fields}
-               initialValues={initialValues}
-               onSubmit={handleSubmit}
-               submitText={isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
-               className="space-y-6 modal-dynamic-form"
-               renderSubmitButton={({ submitText }) => (
-                 <div className="space-y-6">
-                   {/* Botón de Registro */}
-                   <button
-                     type="submit"
-                     disabled={isLoading}
-                     className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl font-medium relative overflow-hidden group"
-                   >
-                     {isLoading ? (
-                       <div className="flex items-center justify-center">
-                         <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                         {submitText}
-                       </div>
-                     ) : (
-                       submitText
-                     )}
-                     {/* Efecto de brillo */}
-                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                   </button>
+          {/* Formulario */}
+          <div className="px-8 pb-8 relative z-10">
+            <DynamicForm
+              fields={fields}
+              initialValues={initialValues}
+              onSubmit={handleSubmit}
+              submitText={isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+              className="space-y-6"
+              renderSubmitButton={({ submitText, loading }) => (
+                <div className="space-y-6">
+                  {/* Botón de Registro */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 text-white py-4 px-6 rounded-2xl hover:from-green-600 hover:via-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl hover:shadow-green-500/25 font-semibold text-lg relative overflow-hidden group transform hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin mr-3" />
+                        {submitText}
+                      </div>
+                    ) : (
+                      <span className="relative z-10">{submitText}</span>
+                    )}
+                    {/* Efecto de brillo */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                    {/* Efecto de resplandor */}
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-green-400/20 to-emerald-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </button>
 
-                   {/* Enlaces adicionales */}
-                   <div className="text-center space-y-3">
-                     <div className="flex items-center justify-center space-x-4">
-                       <div className="flex-1 h-px bg-white/20"></div>
-                       <span className="text-white/50 text-sm">o regístrate con</span>
-                       <div className="flex-1 h-px bg-white/20"></div>
-                     </div>
+                  {/* Separador */}
+                  <div className="flex items-center justify-center space-x-4 py-2">
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                    <span className="text-white/60 text-sm font-medium px-3">o regístrate con</span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                  </div>
 
-                     {/* Botones de redes sociales */}
-                     <div className="grid grid-cols-3 gap-3">
-                       <button
-                         type="button"
-                         className="flex items-center justify-center bg-white/10 border border-white/20 rounded-xl py-3 px-4 hover:bg-white/20 transition-all duration-200"
-                       >
-                         <div className="w-5 h-5 bg-gradient-to-br from-red-400 to-red-600 rounded"></div>
-                       </button>
-                       <button
-                         type="button"
-                         className="flex items-center justify-center bg-white/10 border border-white/20 rounded-xl py-3 px-4 hover:bg-white/20 transition-all duration-200"
-                       >
-                         <div className="w-5 h-5 bg-gradient-to-br from-gray-400 to-gray-600 rounded"></div>
-                       </button>
-                       <button
-                         type="button"
-                         className="flex items-center justify-center bg-white/10 border border-white/20 rounded-xl py-3 px-4 hover:bg-white/20 transition-all duration-200"
-                       >
-                         <div className="w-5 h-5 bg-gradient-to-br from-blue-400 to-blue-600 rounded"></div>
-                       </button>
-                     </div>
+                  {/* Botones de redes sociales */}
+                  <div className="flex justify-center space-x-3">
+                    <button
+                      type="button"
+                      className="flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl py-4 px-4 hover:bg-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-105 active:scale-95 group"
+                    >
+                      <div className="w-6 h-6 bg-gradient-to-br from-red-400 to-red-600 rounded-lg group-hover:scale-110 transition-transform duration-200"></div>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl py-4 px-4 hover:bg-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-105 active:scale-95 group"
+                    >
+                      <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg group-hover:scale-110 transition-transform duration-200"></div>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl py-4 px-4 hover:bg-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-105 active:scale-95 group"
+                    >
+                      <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg group-hover:scale-110 transition-transform duration-200"></div>
+                    </button>
+                  </div>
 
-                     {/* Enlace para iniciar sesión */}
-                     <p className="text-white/60 text-sm">
-                       ¿Ya tienes una cuenta?{' '}
-                       <button
-                         type="button"
-                         onClick={onSwitchToLogin}
-                         className="text-green-400 hover:text-green-300 font-medium transition-colors duration-200"
-                       >
-                         Inicia sesión aquí
-                       </button>
-                     </p>
-                   </div>
-                 </div>
-               )}
-             />
-           </div>
+                  {/* Enlace para iniciar sesión */}
+                  <div className="text-center pt-4">
+                    <p className="text-white/70 text-sm">
+                      ¿Ya tienes una cuenta?{' '}
+                      <button
+                        type="button"
+                        onClick={onSwitchToLogin}
+                        className="text-green-400 hover:text-green-300 font-semibold transition-all duration-200 hover:underline decoration-green-400 underline-offset-2"
+                      >
+                        Inicia sesión aquí
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              )}
+            />
+          </div>
         </div>
       </div>
     </div>

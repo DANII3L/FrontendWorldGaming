@@ -151,12 +151,7 @@ const PlantillasWhatsApp: React.FC = () => {
           </div>
           <DynamicForm
             fields={plantillaFields as any}
-            values={editingPlantilla || {}}
-            onChange={(name, value) => {
-              if (editingPlantilla) {
-                setEditingPlantilla({ ...editingPlantilla, [name]: value });
-              }
-            }}
+            initialValues={editingPlantilla || {}}
             onSubmit={handleSavePlantilla}
             submitText={editingPlantilla ? 'Actualizar' : 'Crear'}
           />

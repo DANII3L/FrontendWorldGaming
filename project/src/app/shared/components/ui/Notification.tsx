@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Notification as NotificationProps } from '../../contexts/NotificationContext';
-import { CheckCircle, XCircle, Info, AlertTriangle, X } from 'lucide-react';
+import { CheckCircle, XCircle, Info, AlertTriangle, X, Trophy, MessageSquare } from 'lucide-react';
+
+export type NotificationType = 'success' | 'error' | 'info' | 'warning' | 'tournament' | 'message';
+
+interface NotificationProps {
+  id: number;
+  message: string;
+  type: NotificationType;
+}
 
 interface Props {
   notification: NotificationProps;
@@ -12,6 +19,8 @@ const ICONS = {
   error: <XCircle className="h-6 w-6" />,
   info: <Info className="h-6 w-6" />,
   warning: <AlertTriangle className="h-6 w-6" />,
+  tournament: <Trophy className="h-6 w-6" />,
+  message: <MessageSquare className="h-6 w-6" />,
 };
 
 const COLORS = {
@@ -19,6 +28,8 @@ const COLORS = {
   error: 'bg-red-500/95 border-red-600',
   info: 'bg-blue-500/95 border-blue-600',
   warning: 'bg-yellow-500/95 border-yellow-600',
+  tournament: 'bg-orange-500/95 border-orange-600',
+  message: 'bg-purple-500/95 border-purple-600',
 };
 
 const NOTIFICATION_TIMEOUT = 5000; // 5 seconds

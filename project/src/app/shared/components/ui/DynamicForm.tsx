@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { LucideIcon, Plus, Trash2 } from 'lucide-react';
+import PhoneInput from './PhoneInput';
+import PasswordRules from './PasswordRules';
 
 export interface FormField {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'file' | 'checkbox' | 'radio' | 'requirements';
+  type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'file' | 'checkbox' | 'radio' | 'requirements' | 'phone';
   placeholder?: string;
   required?: boolean;
   min?: number;
@@ -19,18 +21,19 @@ export interface FormField {
   };
   icon?: LucideIcon;
   className?: string;
+  colSpan?: number;
   requirementsConfig?: {
     title?: string;
     subtitle?: string;
     placeholder?: string;
     maxHeight?: string;
   };
+  showPasswordRules?: boolean;
 }
 
 export interface DynamicFormProps {
   fields: FormField[];
-  values: Record<string, any>;
-  onChange: (name: string, value: any) => void;
+  initialValues?: Record<string, any>;
   onSubmit: (values: Record<string, any>) => void;
   title?: string;
   subtitle?: string;
@@ -39,8 +42,6 @@ export interface DynamicFormProps {
   onCancel?: () => void;
   loading?: boolean;
   className?: string;
-  layout?: 'vertical' | 'horizontal' | 'grid';
-  columns?: 1 | 2 | 3;
   showCancelButton?: boolean;
   icon?: LucideIcon;
   iconColor?: string;
@@ -51,8 +52,7 @@ export interface DynamicFormProps {
 
 const DynamicForm: React.FC<DynamicFormProps> = ({
   fields,
-  values,
-  onChange,
+  initialValues = {},
   onSubmit,
   title,
   subtitle,
@@ -61,8 +61,6 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   onCancel,
   loading = false,
   className = '',
-  layout = 'vertical',
-  columns = 1,
   showCancelButton = true,
   icon: Icon,
   iconColor = 'text-blue-400',
@@ -70,6 +68,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   onRequirementsChange,
   renderSubmitButton
 }) => {
+  const [values, setValues] = useState<Record<string, any>>(initialValues);
   const [newRequirements, setNewRequirements] = useState<Record<string, string>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -78,7 +77,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   };
 
   const handleInputChange = (name: string, value: any) => {
-    onChange(name, value);
+    setValues(prev => ({ ...prev, [name]: value }));
   };
 
   const handleAddRequirement = (fieldName: string) => {
@@ -109,7 +108,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     const value = values[field.name] || '';
     const fieldId = `field-${field.name}`;
 
-    const baseInputClasses = "w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500 transition-all duration-200";
+    const baseInputClasses = "w-full px-4 py-3 bg-white/8 border-2 border-white/15 rounded-xl text-white placeholder-white/60 focus:outline-none focus:border-green-500/60 focus:bg-white/12 transition-all duration-300 font-medium backdrop-blur-sm";
     const fieldClasses = field.className ? `${baseInputClasses} ${field.className}` : baseInputClasses;
 
     switch (field.type) {
@@ -212,6 +211,17 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           </div>
         );
 
+      case 'phone':
+        return (
+          <PhoneInput
+            value={value}
+            onChange={(phoneValue) => handleInputChange(field.name, phoneValue)}
+            placeholder={field.placeholder}
+            required={field.required}
+            className={field.className}
+          />
+        );
+
       case 'requirements':
         const requirements = requirementsData[field.name] || [];
         const config = field.requirementsConfig || {};
@@ -290,25 +300,10 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     }
   };
 
-  const getLayoutClasses = () => {
-    switch (layout) {
-      case 'horizontal':
-        return 'grid grid-cols-1 md:grid-cols-2 gap-6';
-      case 'grid':
-        switch (columns) {
-          case 1: return 'grid grid-cols-1 gap-6';
-          case 2: return 'grid grid-cols-1 md:grid-cols-2 gap-6';
-          case 3: return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
-          default: return 'grid grid-cols-1 gap-6';
-        }
-      default:
-        return 'space-y-6';
-    }
-  };
 
   return (
-    <div className={`bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 shadow-lg ${className}`}>
-      <form onSubmit={handleSubmit} className="p-6">
+    <div className={className}>
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header */}
         {(title || subtitle || Icon) && (
           <div className="mb-6">
@@ -325,21 +320,30 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         )}
 
         {/* Fields */}
-        <div className={getLayoutClasses()}>
-          {fields.map((field) => (
-            <div key={field.name} className="space-y-2">
-              {field.type !== 'checkbox' && field.type !== 'radio' && field.type !== 'requirements' && (
-                <label htmlFor={`field-${field.name}`} className="block text-white/80 text-sm font-medium">
-                  {field.label}
-                  {field.required && <span className="text-red-400 ml-1">*</span>}
-                </label>
-              )}
-              {renderField(field)}
-              {field.validation?.message && (
-                <p className="text-red-400 text-xs">{field.validation.message}</p>
-              )}
-            </div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {fields.map((field) => {
+            const colSpan = field.colSpan || 1;
+            const gridClass = colSpan === 2 ? 'md:col-span-2' : 'md:col-span-1';
+            const fieldValue = values[field.name] || '';
+            
+            return (
+              <div key={field.name} className={`space-y-2 ${gridClass}`}>
+                {field.type !== 'checkbox' && field.type !== 'radio' && field.type !== 'requirements' && (
+                  <label htmlFor={`field-${field.name}`} className="block text-white/90 text-sm font-semibold">
+                    {field.label}
+                    {field.required && <span className="text-red-400 ml-1">*</span>}
+                  </label>
+                )}
+                {renderField(field)}
+                {field.type === 'password' && field.showPasswordRules && (
+                  <PasswordRules password={fieldValue} />
+                )}
+                {field.validation?.message && (
+                  <p className="text-red-400 text-xs">{field.validation.message}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Actions */}
@@ -354,7 +358,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
             </button>
           )}
           {renderSubmitButton ? (
-            <div>
+            <div className="w-full">
               {renderSubmitButton({ submitText, loading })}
             </div>
           ) : (

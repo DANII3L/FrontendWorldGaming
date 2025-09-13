@@ -161,8 +161,7 @@ const Perfil: React.FC = () => {
         {activeTab === 'personal' && (
           <DynamicForm
             fields={personalFields as any}
-            values={initialPersonal}
-            onChange={() => { }}
+            initialValues={initialPersonal}
             onSubmit={handleSave}
             submitText={saving ? 'Guardando...' : 'Guardar cambios'}
           />
@@ -170,8 +169,7 @@ const Perfil: React.FC = () => {
         {activeTab === 'security' && (
           <DynamicForm
             fields={securityFields as any}
-            values={initialSecurity}
-            onChange={() => { }}
+            initialValues={initialSecurity}
             onSubmit={handleSave}
             submitText={saving ? 'Guardando...' : 'Guardar cambios'}
           />
@@ -179,8 +177,7 @@ const Perfil: React.FC = () => {
         {activeTab === 'preferences' && (
           <DynamicForm
             fields={preferencesFields as any}
-            values={initialPreferences}
-            onChange={() => { }}
+            initialValues={initialPreferences}
             onSubmit={handleSave}
             submitText={saving ? 'Guardando...' : 'Guardar cambios'}
           />

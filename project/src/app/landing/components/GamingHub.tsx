@@ -21,8 +21,7 @@ import {
   Shield,
   Sword
 } from 'lucide-react';
-import { useNotificationModal } from '../../shared/contexts/NotificationModalContext';
-import { useNotificationCenter } from '../../shared/contexts/NotificationCenterContext';
+import { useNotification } from '../../shared/components/ui/UnifiedNotificationSystem';
 
 interface PanelData {
   id: string;
@@ -45,8 +44,7 @@ const GamingHub: React.FC = () => {
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [hoveredPanel, setHoveredPanel] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { openNotificationModal } = useNotificationModal();
-  const { addNotification } = useNotificationCenter();
+  const { addNotification, openModal } = useNotification();
 
   // Simular carga inicial
   useEffect(() => {
@@ -120,46 +118,23 @@ const GamingHub: React.FC = () => {
   const handlePanelClick = (panelId: string) => {
     if (panelId === 'notifications') {
       // Abrir el modal de notificaciones
-      openNotificationModal();
+      openModal();
       return;
     }
     
     if (panelId === 'stats') {
       // Simular notificación de estadísticas
-      addNotification({
-        type: 'info',
-        title: 'Estadísticas Actualizadas',
-        message: 'Tus estadísticas de juego han sido actualizadas. ¡Revisa tu progreso!',
-        priority: 'medium'
-      });
+      addNotification('Tus estadísticas de juego han sido actualizadas. ¡Revisa tu progreso!', 'info');
     }
     
     if (panelId === 'activity') {
       // Simular notificación de actividad
-      addNotification({
-        type: 'success',
-        title: '¡Nuevo Logro Desbloqueado!',
-        message: 'Has completado 100 partidas. ¡Felicidades por tu dedicación!',
-        priority: 'high',
-        action: {
-          label: 'Ver Logros',
-          url: '/logros'
-        }
-      });
+      addNotification('¡Nuevo Logro Desbloqueado! Has completado 100 partidas. ¡Felicidades por tu dedicación!', 'success');
     }
     
     if (panelId === 'social') {
       // Simular notificación social
-      addNotification({
-        type: 'message',
-        title: 'Nuevo Mensaje',
-        message: 'Tu amigo GamingPro te ha enviado un mensaje.',
-        priority: 'medium',
-        action: {
-          label: 'Leer Mensaje',
-          url: '/mensajes'
-        }
-      });
+      addNotification('Tu amigo GamingPro te ha enviado un mensaje.', 'message');
     }
     
     if (activePanel === panelId) {

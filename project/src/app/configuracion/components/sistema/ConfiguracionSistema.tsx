@@ -451,10 +451,7 @@ const ConfiguracionSistema: React.FC = () => {
                     </div>
                     <DynamicForm
                       fields={logroFields as any}
-                      values={formLogroValues}
-                      onChange={(name, value) => {
-                        setFormLogroValues(prev => ({ ...prev, [name]: value }));
-                      }}
+                      initialValues={formLogroValues}
                       onSubmit={handleSaveLogro}
                       submitText={editingLogro ? 'Actualizar' : 'Crear'}
                       requirementsData={{ requisitos: requisitosList }}
@@ -630,10 +627,7 @@ const ConfiguracionSistema: React.FC = () => {
                      </div>
                      <DynamicForm
                        fields={insigniaFields as any}
-                       values={formInsigniaValues}
-                       onChange={(name, value) => {
-                         setFormInsigniaValues(prev => ({ ...prev, [name]: value }));
-                       }}
+                       initialValues={formInsigniaValues}
                        onSubmit={handleSaveInsignia}
                        submitText={editingInsignia ? 'Actualizar' : 'Crear'}
                      />
@@ -785,10 +779,7 @@ const ConfiguracionSistema: React.FC = () => {
                   </div>
                   <DynamicForm
                     fields={whatsappFields as any}
-                    values={configWhatsApp}
-                    onChange={(name, value) => {
-                      setConfigWhatsApp({ ...configWhatsApp, [name]: value });
-                    }}
+                    initialValues={configWhatsApp}
                     onSubmit={handleSaveWhatsApp}
                     submitText="Guardar Configuración"
                   />
@@ -892,10 +883,7 @@ const ConfiguracionSistema: React.FC = () => {
                   </div>
                   <DynamicForm
                     fields={emailFields as any}
-                    values={configEmail}
-                    onChange={(name, value) => {
-                      setConfigEmail({ ...configEmail, [name]: value });
-                    }}
+                    initialValues={configEmail}
                     onSubmit={handleSaveEmail}
                     submitText="Guardar Configuración"
                   />

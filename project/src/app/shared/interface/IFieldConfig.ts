@@ -3,7 +3,7 @@ import { LucideIcon } from "lucide-react";
 export interface IFieldConfig {
     name: string;
     label: string;
-    type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'file' | 'checkbox' | 'radio' | 'requirements'; 
+    type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'file' | 'checkbox' | 'radio' | 'requirements' | 'phone'; 
     placeholder?: string;
     required?: boolean;
     min?: number;
@@ -25,4 +25,5 @@ export interface IFieldConfig {
       placeholder?: string;
       maxHeight?: string;
     };
+    showPasswordRules?: boolean;
 }

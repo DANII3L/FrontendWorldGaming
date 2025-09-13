@@ -2,8 +2,7 @@ import React from "react";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import Logo from "./Logo";
-import DynamicSidebar from "../../shared/components/DynamicSidebar";
-import StaticSidebar from "../../shared/components/StaticSidebar";
+import UnifiedSidebar from "../../shared/components/ui/UnifiedSidebar";
 
 interface HeaderSectionProps {
   scrollToSection: (sectionId: string) => void;
@@ -40,18 +39,15 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
         </div>
       </header>
 
-      {/* Renderizar sidebar dinámico si está autenticado, sino el sidebar estático */}
-      {isAuthenticated ? (
-        <DynamicSidebar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
-      ) : (
-        <StaticSidebar
-          isMenuOpen={isMenuOpen}
-          setIsMenuOpen={setIsMenuOpen}
-          scrollToSection={scrollToSection}
-          onOpenLoginModal={onOpenLoginModal}
-          onOpenRegisterModal={onOpenRegisterModal}
-        />
-      )}
+      {/* Renderizar sidebar unificado */}
+      <UnifiedSidebar
+        isMenuOpen={isMenuOpen}
+        setIsMenuOpen={setIsMenuOpen}
+        scrollToSection={scrollToSection}
+        onOpenLoginModal={onOpenLoginModal}
+        onOpenRegisterModal={onOpenRegisterModal}
+        isDynamic={isAuthenticated}
+      />
     </>
   );
 };

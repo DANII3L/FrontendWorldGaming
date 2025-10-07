@@ -13,7 +13,6 @@ const UsuarioForm: React.FC = () => {
     const [formValues, setFormValues] = useState({
         Nombre: '',
         Apellidos: '',
-        Identificacion: '',
         Correo: '',
         Telefono: '',
         Password: '',
@@ -33,7 +32,6 @@ const UsuarioForm: React.FC = () => {
     const fields: IFieldConfig[] = [
         { name: 'Nombre', label: 'Nombre', type: 'text', required: true, colSpan: 1, maxLength: 20 },
         { name: 'Apellidos', label: 'Apellidos', type: 'text', required: true, colSpan: 1 },
-        { name: 'Identificacion', label: 'Identificación', type: 'number', required: true, colSpan: 2, maxLength: 20 },
         { name: 'Correo', label: 'Correo Electrónico', type: 'email', required: true, colSpan: 2 },
         { name: 'Telefono', label: 'Teléfono', type: 'number', required: true, colSpan: 1 },
         { name: 'Rol', label: 'Rol', type: 'select', required: true, colSpan: 1, options: [
@@ -55,7 +53,6 @@ const UsuarioForm: React.FC = () => {
                         setFormValues({
                             Nombre: user.data.nombre || '',
                             Apellidos: user.data.apellidos || '',
-                            Identificacion: user.data.identificacion || '',
                             Correo: user.data.correo || '',
                             Telefono: user.data.telefono || '',
                             Password: '',

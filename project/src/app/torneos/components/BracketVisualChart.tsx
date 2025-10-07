@@ -556,11 +556,12 @@ const BracketVisualChart: React.FC<BracketVisualChartProps> = ({
           <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <Eye className="h-4 w-4 text-yellow-400" />
-              <span className="text-sm font-medium text-yellow-400">Vista de Solo Lectura</span>
+              <span className="text-sm font-medium text-yellow-400">Gráfico del Bracket - {tournamentName}</span>
             </div>
             <p className="text-sm text-white/80">
-              Este es el gráfico del bracket en modo de solo lectura. Para editar la configuración de partidas,
-              accede desde el botón "Bracket" y selecciona "Configurar Partidas".
+              Estás viendo el árbol de eliminación del torneo con {participants.length} participantes. 
+              Este gráfico muestra todas las rondas del torneo: octavos de final, cuartos, semifinales y final. 
+              Los partidos configurados aparecen en las primeras rondas.
             </p>
             <div className="mt-3 flex items-center gap-2 text-xs text-yellow-400/80">
               <span>ℹ️</span>

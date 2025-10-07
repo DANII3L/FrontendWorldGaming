@@ -14,6 +14,7 @@ import {
     BarChart3,
     ArrowLeft
 } from 'lucide-react';
+import { getDifficultyBadgeDark } from '../../shared/utils/difficultyUtils';
 
 interface Tournament {
     id: string;
@@ -197,19 +198,10 @@ const TournamentDetailsModal: React.FC<TournamentDetailsModalProps> = ({
         }
     };
 
+    // Usar función centralizada de difficultyUtils
     const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty) {
-            case 'Profesional':
-                return 'text-orange-500';
-            case 'Avanzado':
-                return 'text-orange-400';
-            case 'Intermedio':
-                return 'text-teal-400';
-            case 'Principiante':
-                return 'text-green-400';
-            default:
-                return 'text-gray-400';
-        }
+        const badgeConfig = getDifficultyBadgeDark(difficulty);
+        return badgeConfig.textColor;
     };
 
     const getLevelColor = (level: string) => {

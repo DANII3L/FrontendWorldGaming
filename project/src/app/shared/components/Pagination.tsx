@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { PAGINATION_CONFIG } from '../constants/pagination';
 
 interface PaginationProps {
   currentPage: number;
@@ -17,7 +18,7 @@ const Pagination: React.FC<PaginationProps> = ({
   onItemsPerPageChange,
 }) => {
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-  const itemsPerPageOptions = [3, 6, 9, 12, 15]; // Opciones de ítems por página
+  const itemsPerPageOptions = PAGINATION_CONFIG.pageSizeOptions;
 
   return (
     <nav className="flex items-center justify-between border-t border-border px-4 py-3 sm:px-6">

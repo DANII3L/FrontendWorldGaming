@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import DynamicForm, { FormField } from '../../shared/components/ui/DynamicForm';
+import LoadingScreen from '../../shared/components/ui/LoadingScreen';
 import { register } from '../service/segServices';
 import { useNotification } from '../../shared/components/ui/UnifiedNotificationSystem';
 
@@ -47,10 +48,12 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
       colSpan: 2
     },
     {
-      name: 'Identificacion',
-      label: 'Identificación',
+      name: 'Alias',
+      label: 'Alias',
       type: 'text',
-      placeholder: 'Número de identificación',
+      required: true,
+      placeholder: 'Tu alias de jugador',
+      maxLength: 100,
       colSpan: 2
     },
     {
@@ -80,7 +83,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
     Correo: '',
     Password: '',
     Telefono: '',
-    Identificacion: '',
+    Alias: '',
     confirmPassword: ''
   };
 
@@ -103,7 +106,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
 
   const handleSubmit = async (values: Record<string, any>) => {
     // Validar campos requeridos
-    if (!values.Nombre || !values.Apellidos || !values.Correo || !values.Password) {
+    if (!values.Nombre || !values.Apellidos || !values.Correo || !values.Password || !values.Alias) {
       addNotification('Por favor completa todos los campos obligatorios', 'warning');
       return;
     }
@@ -131,7 +134,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
         Correo: values.Correo,
         Password: values.Password,
         Telefono: values.Telefono || null,
-        Identificacion: values.Identificacion || null
+        Alias: values.Alias
       };
 
       // Llamar al servicio de registro
@@ -153,6 +156,41 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
   };
 
   if (!isOpen) return null;
+
+  // Mostrar loading al registrar
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-gray-900/95 backdrop-blur-lg rounded-2xl border border-white/10 shadow-2xl w-full max-w-2xl">
+          <LoadingScreen
+            title="Creando Cuenta"
+            subtitle="Procesando tu registro..."
+            description="Estamos creando tu cuenta en WorldGaming. Esto puede tomar unos momentos."
+            showDetails={true}
+            details={{
+              title: "Información del registro",
+              items: [
+                {
+                  label: 'Estado',
+                  value: 'Procesando...'
+                },
+                {
+                  label: 'Validación',
+                  value: 'Completada'
+                },
+                {
+                  label: 'Siguiente paso',
+                  value: 'Crear cuenta'
+                }
+              ]
+            }}
+            variant="detailed"
+            className="bg-transparent min-h-0"
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">

@@ -1,115 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { useColorPalette } from '../../shared/contexts/ColorPaletteContext';
-import { useGame } from '../../shared/contexts/GameContext';
-import { getAvailableGames } from '../../shared/services/paletteService';
-import { Loader2, Zap, Target, Crown, Flame, Sparkles } from 'lucide-react';
+import React from 'react';
+import { ChevronDown, ChevronUp, Search, Loader2, Star, Zap, RefreshCw } from 'lucide-react';
+import { useGameSelector, GameSelectorProps } from '../hooks/useGameSelector';
 
-interface Game {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  players: string;
-  difficulty: string;
-}
-
-const gameData: Record<string, Omit<Game, 'id' | 'name' | 'icon'>> = {
-  'gta-vi': {
-    description: 'Mundo abierto épico',
-    players: '2.5M+',
-    difficulty: 'EXTREMO'
-  },
-  'valorant': {
-    description: 'Táctico FPS competitivo',
-    players: '1.8M+',
-    difficulty: 'ALTO'
-  },
-  'csgo': {
-    description: 'Clásico shooter táctico',
-    players: '3.2M+',
-    difficulty: 'PRO'
-  },
-  'fortnite': {
-    description: 'Battle Royale épico',
-    players: '4.5M+',
-    difficulty: 'MEDIO'
-  },
-  'lol': {
-    description: 'MOBA estratégico',
-    players: '2.8M+',
-    difficulty: 'ALTO'
-  },
-  'overwatch': {
-    description: 'Hero shooter dinámico',
-    players: '1.5M+',
-    difficulty: 'MEDIO'
-  },
-  'dota2': {
-    description: 'MOBA complejo',
-    players: '1.2M+',
-    difficulty: 'EXTREMO'
-  },
-  'rainbow6': {
-    description: 'Táctico de precisión',
-    players: '900K+',
-    difficulty: 'ALTO'
-  }
-};
-
-const gameIcons: Record<string, string> = {
-  'gta-vi': '🎮',
-  'valorant': '🎯',
-  'csgo': '🔫',
-  'fortnite': '🏗️',
-  'lol': '⚔️',
-  'overwatch': '🛡️',
-  'dota2': '⚔️',
-  'rainbow6': '🔫'
-};
-
-const GameSelector: React.FC = () => {
-  const { setGamePalette, isLoading } = useColorPalette();
-  const { selectedGame, setSelectedGame } = useGame();
-  const [games, setGames] = useState<Game[]>([]);
-  const [loadingGames, setLoadingGames] = useState(true);
-  const [hoveredGame, setHoveredGame] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  useEffect(() => {
-    const loadGames = async () => {
-      try {
-        const availableGames = await getAvailableGames();
-        const gamesWithData = availableGames.map(game => ({
-          ...game,
-          icon: gameIcons[game.id] || '🎮',
-          ...gameData[game.id]
-        }));
-        setGames(gamesWithData);
-      } catch (error) {
-        console.error('Error loading games:', error);
-      } finally {
-        setLoadingGames(false);
-      }
-    };
-
-    loadGames();
-  }, []);
-
-  const handleGameSelect = async (gameId: string) => {
-    await setGamePalette(gameId);
-    setSelectedGame(gameId);
-    setIsExpanded(false);
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'EXTREMO': return 'text-red-400 border-red-400/30 bg-red-400/10';
-      case 'PRO': return 'text-purple-400 border-purple-400/30 bg-purple-400/10';
-      case 'ALTO': return 'text-orange-400 border-orange-400/30 bg-orange-400/10';
-      case 'MEDIO': return 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10';
-      default: return 'text-green-400 border-green-400/30 bg-green-400/10';
-    }
-  };
+const GameSelector: React.FC<GameSelectorProps> = ({ onPaletteUpdate }) => {
+  const {
+    // Estados
+    filteredGames,
+    loadingGames,
+    hoveredGame,
+    isExpanded,
+    searchTerm,
+    selectedGame,
+    currentGame,
+    
+    // Acciones
+    setHoveredGame,
+    setSearchTerm,
+    handleGameSelect,
+    handleExpandToggle,
+    clearSelection,
+    refreshGames,
+    
+    // Utilidades
+    getGameCardStyle
+  } = useGameSelector(onPaletteUpdate);
 
   if (loadingGames) {
     return (
@@ -127,147 +41,154 @@ const GameSelector: React.FC = () => {
     );
   }
 
-  const currentGame = games.find(g => g.id === selectedGame);
-
   return (
     <div className="fixed top-24 right-6 z-50">
-      {/* Contenedor principal */}
-      <div className="relative">
-        {/* Efectos de partículas de fondo */}
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-red-500/20 to-purple-500/20 rounded-3xl blur-xl animate-pulse"></div>
-        
-        {/* Contenido principal */}
-        <div className="relative bg-gradient-to-br from-black/60 via-gray-900/60 to-black/60 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
-          {/* Header con efecto gaming */}
-          <div className="relative p-6 border-b border-white/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <Zap className="w-6 h-6 text-orange-400 animate-pulse" />
-                  <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-yellow-400 animate-bounce" />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-lg uppercase tracking-wider">
-                    UNIVERSO GAMING
-                  </h3>
-                  <p className="text-white/60 text-xs">Selecciona tu dimensión</p>
-                </div>
+      <div className="bg-gradient-to-br from-black/40 to-gray-900/40 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+                <Zap className="w-5 h-5 text-white" />
               </div>
+              <div>
+                <h3 className="text-white font-bold text-lg">Selector de Juegos</h3>
+                <p className="text-gray-300 text-sm">Elige tu aventura</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
               <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200"
+                onClick={refreshGames}
+                disabled={loadingGames}
+                className="p-2 hover:bg-white/10 rounded-xl transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Actualizar lista de juegos"
               >
-                <Target className="w-4 h-4 text-white" />
+                <RefreshCw className={`w-5 h-5 text-white group-hover:text-orange-400 transition-colors ${loadingGames ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={handleExpandToggle}
+                className="p-2 hover:bg-white/10 rounded-xl transition-all duration-200 group"
+                title={isExpanded ? "Contraer selector" : "Expandir selector"}
+              >
+                {isExpanded ? (
+                  <ChevronUp className="w-5 h-5 text-white group-hover:text-orange-400 transition-colors" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-white group-hover:text-orange-400 transition-colors" />
+                )}
               </button>
             </div>
           </div>
 
-          {/* Juego actual destacado */}
-          {currentGame && (
-            <div className="p-6 border-b border-white/10">
-              <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-2xl p-4 border border-orange-500/30">
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <span className="text-3xl">{currentGame.icon}</span>
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-white font-bold text-sm">{currentGame.name}</h4>
-                    <p className="text-white/70 text-xs">{currentGame.description}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span className="text-orange-400 text-xs font-medium">{currentGame.players} jugadores</span>
-                      <span className={`text-xs px-2 py-1 rounded-full border ${getDifficultyColor(currentGame.difficulty)}`}>
-                        {currentGame.difficulty}
-                      </span>
-                    </div>
-                  </div>
-                  <Crown className="w-5 h-5 text-yellow-400" />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Barra de búsqueda */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar juegos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50 transition-all"
+            />
+          </div>
+        </div>
 
-                     {/* Lista de juegos */}
-           <div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-             <div className="p-4 space-y-2 max-h-64 overflow-y-auto" style={{
-               scrollbarWidth: 'thin',
-               scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent'
-             }}>
-              {games.map((game, index) => (
-                <button
-                  key={game.id}
-                  onClick={() => handleGameSelect(game.id)}
-                  onMouseEnter={() => setHoveredGame(game.id)}
-                  onMouseLeave={() => setHoveredGame(null)}
-                  disabled={isLoading}
-                                     className={`w-full relative group transition-all duration-300 transform ${
-                     hoveredGame === game.id ? 'scale-105' : 'scale-100'
-                   }`}
-                   style={{ 
-                     animationDelay: `${index * 100}ms`
-                   }}
-                >
-                  {/* Efecto de hover */}
-                  <div className={`absolute inset-0 rounded-xl transition-all duration-300 ${
-                    hoveredGame === game.id 
-                      ? 'bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30' 
-                      : 'bg-white/5 border border-white/10'
-                  }`}></div>
-                  
-                  {/* Contenido del botón */}
-                  <div className="relative p-4 rounded-xl flex items-center space-x-3">
-                    <div className="relative">
-                      <span className="text-2xl group-hover:scale-110 transition-transform duration-200">
+        {/* Contenido expandible */}
+        {isExpanded && (
+          <div className="max-h-96 overflow-y-auto">
+            {filteredGames.length === 0 ? (
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-400 text-sm">
+                  {searchTerm ? 'No se encontraron juegos' : 'No hay juegos disponibles'}
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 space-y-3">
+                {filteredGames.map((game) => (
+                  <div
+                    key={game.id}
+                    className={`group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer ${
+                      selectedGame === game.id?.toString()
+                        ? 'border-orange-400/50 bg-orange-400/10'
+                        : 'border-white/20 hover:border-white/40 hover:bg-white/5'
+                    }`}
+                    style={getGameCardStyle(game)}
+                    onClick={() => game.id && handleGameSelect(game.id)}
+                    onMouseEnter={() => setHoveredGame(game.id || null)}
+                    onMouseLeave={() => setHoveredGame(null)}
+                  >
+                    {/* Indicador de selección */}
+                    {selectedGame === game.id?.toString() && (
+                      <div className="absolute top-2 right-2 w-3 h-3 bg-orange-400 rounded-full animate-pulse"></div>
+                    )}
+
+                    <div className="flex items-start space-x-4">
+                      {/* Icono del juego */}
+                      <div className="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
                         {game.icon}
-                      </span>
-                      {hoveredGame === game.id && (
-                        <div className="absolute -inset-2 bg-orange-400/20 rounded-full animate-ping"></div>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 text-left">
-                      <h4 className="text-white font-bold text-sm group-hover:text-orange-400 transition-colors">
-                        {game.name}
-                      </h4>
-                      <p className="text-white/60 text-xs">{game.description}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <span className="text-orange-400 text-xs font-medium">{game.players}</span>
-                        <span className={`text-xs px-2 py-1 rounded-full border ${getDifficultyColor(game.difficulty)}`}>
-                          {game.difficulty}
-                        </span>
+                      </div>
+
+                      {/* Información del juego */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <h4 className="text-white font-semibold text-sm truncate">
+                            {game.nombre}
+                          </h4>
+                        </div>
+                        
+                        <p className="text-gray-300 text-xs mb-3 line-clamp-2">
+                          {game.descripcion}
+                        </p>
+
+                        {/* Estadísticas del juego */}
+                        <div className="flex items-center space-x-4 text-xs text-gray-400">
+                          {game.categoriaNombre && (
+                            <div className="flex items-center space-x-1">
+                              <Star className="w-3 h-3" />
+                              <span className="truncate">{game.categoriaNombre}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center space-x-1">
-                      {hoveredGame === game.id && (
-                        <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
-                      )}
-                      {selectedGame === game.id && (
-                        <Crown className="w-4 h-4 text-yellow-400" />
-                      )}
-                    </div>
+
+                    {/* Efecto hover */}
+                    {hoveredGame === game.id && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-orange-400/5 to-red-500/5 rounded-xl pointer-events-none"></div>
+                    )}
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="p-4 border-t border-white/10 bg-black/20">
+          <div className="flex items-center justify-between text-xs text-gray-400">
+            <span>
+              {filteredGames.length} {filteredGames.length === 1 ? 'juego' : 'juegos'} disponible{filteredGames.length !== 1 ? 's' : ''}
+            </span>
+            {currentGame && (
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                <span className="text-orange-400 font-medium">Activo: {currentGame.nombre}</span>
+                <button
+                  onClick={clearSelection}
+                  className="ml-2 px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs rounded transition-colors"
+                  title="Limpiar selección"
+                >
+                  ✕
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-          {/* Footer con estadísticas */}
-          <div className="p-4 border-t border-white/10">
-            <div className="flex items-center justify-between text-white/60 text-xs">
-              <span>Total: {games.length} universos</span>
-              <span className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>Online</span>
-              </span>
-            </div>
-          </div>
-                 </div>
-       </div>
-
-       
-     </div>
-   );
- };
-
-export default GameSelector; 
+export default GameSelector;

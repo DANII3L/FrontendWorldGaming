@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users, Trophy, Gamepad2, Globe } from 'lucide-react';
-import { useColorPalette } from '../../shared/contexts/ColorPaletteContext';
+import { useColorPalette } from '../../shared/contexts';
 
 interface StatItemProps {
   icon: React.ReactNode;
@@ -35,9 +35,6 @@ const StatsSection: React.FC = () => {
   return (
     <section id="stats"
       className="py-24 relative overflow-hidden"
-      style={{
-        background: `linear-gradient(135deg, ${currentPalette.primary}40 0%, ${currentPalette.secondary}40 50%, ${currentPalette.tertiary}40 100%)`
-      }}
     >
       {/* Efectos de fondo */}
       <div className="absolute inset-0">

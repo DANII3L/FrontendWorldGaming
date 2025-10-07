@@ -108,7 +108,6 @@ const UsuariosList: React.FC = () => {
   return (
     <>
       <DynamicCardList
-        apiEndpoint="/Dynamic/CrudDinamyc"
         cardFields={[]}
         filters={filters}
         pagination={true}
@@ -118,10 +117,6 @@ const UsuariosList: React.FC = () => {
         subtitle="Gestiona los usuarios del sistema"
         newButtonText="Nuevo Usuario"
         newButtonLink="/configuracion/usuarios/nuevo"
-        additionalParams={{ 
-          EntityType: "usuarios", 
-          Parameters: JSON.stringify({ TipoEntidad: "PERSONA" }) 
-        }}
       />
     </>
   );

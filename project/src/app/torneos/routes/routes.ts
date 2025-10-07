@@ -12,11 +12,6 @@ export const torneosNavigation: NavigationItem = {
       icon: Gamepad2
     },
     {
-      name: 'Mis torneos',
-      href: '/worldGaming/torneos/mis-torneos',
-      icon: Trophy
-    },
-    {
       name: 'Administrar Resultados',
       href: '/worldGaming/torneos/resultados',
       icon: Award

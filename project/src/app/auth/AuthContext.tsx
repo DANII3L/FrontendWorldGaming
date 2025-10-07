@@ -8,7 +8,6 @@ interface User {
   correo: string;
   password?: string;
   telefono?: string;
-  identificacion?: string;
   avatar?: string | null;
   ipPublica?: string;
   rol: string;
@@ -29,11 +28,14 @@ interface AuthContextType {
   loading: boolean;
 }
 
+// Variable global para almacenar la función de logout
+let globalLogout: (() => void) | null = null;
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
 
@@ -111,7 +113,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('worldGaming_selectedGame');
+    localStorage.removeItem('worldGaming_gamePalette');
   };
+
+  // Registrar la función de logout globalmente para que apiService pueda usarla
+  useEffect(() => {
+    globalLogout = logout;
+    return () => {
+      globalLogout = null;
+    };
+  }, []);
 
   return (
     <AuthContext.Provider value={{
@@ -125,4 +137,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
+};
+
+// Función para que apiService pueda hacer logout automático
+export const performGlobalLogout = () => {
+  if (globalLogout) {
+    globalLogout();
+  }
 };

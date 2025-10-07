@@ -1,40 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { LucideIcon, Plus, Trash2 } from 'lucide-react';
 import PhoneInput from './PhoneInput';
 import PasswordRules from './PasswordRules';
+import CustomSelect from './CustomSelect';
+import CategoryPicker from './CategoryPicker';
+import { IFieldConfig } from '../../interface/IFieldConfig';
 
-export interface FormField {
-  name: string;
-  label: string;
-  type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'file' | 'checkbox' | 'radio' | 'requirements' | 'phone';
-  placeholder?: string;
-  required?: boolean;
-  min?: number;
-  max?: number;
-  minLength?: number;
-  maxLength?: number;
-  step?: number;
-  options?: { value: string; label: string }[];
-  validation?: {
-    pattern?: string;
-    message?: string;
-  };
-  icon?: LucideIcon;
-  className?: string;
-  colSpan?: number;
-  requirementsConfig?: {
-    title?: string;
-    subtitle?: string;
-    placeholder?: string;
-    maxHeight?: string;
-  };
-  showPasswordRules?: boolean;
-}
+// Usar la interfaz consolidada
+export type FormField = IFieldConfig;
 
 export interface DynamicFormProps {
   fields: FormField[];
   initialValues?: Record<string, any>;
-  onSubmit: (values: Record<string, any>) => void;
+  onSubmit?: (values: Record<string, any>) => void;
+  onChange?: (values: Record<string, any>) => void;
   title?: string;
   subtitle?: string;
   submitText?: string;
@@ -50,10 +29,39 @@ export interface DynamicFormProps {
   renderSubmitButton?: ({ submitText, loading }: { submitText: string; loading: boolean }) => React.ReactNode;
 }
 
+// Componente memoizado para evitar re-renders innecesarios de campos individuales
+const FieldWrapper = memo<{
+  field: FormField;
+  gridClass: string;
+  fieldValue: any;
+  renderField: (field: FormField) => React.ReactNode;
+}>(({ field, gridClass, fieldValue, renderField }) => {
+  return (
+    <div className={`space-y-2 ${gridClass}`}>
+      {field.type !== 'checkbox' && field.type !== 'radio' && field.type !== 'requirements' && (
+        <label htmlFor={`field-${field.name}`} className="block text-white/90 text-sm font-semibold">
+          {field.label}
+          {field.required && <span className="text-red-400 ml-1">*</span>}
+        </label>
+      )}
+      {renderField(field)}
+      {field.type === 'password' && field.showPasswordRules && (
+        <PasswordRules password={fieldValue} />
+      )}
+      {field.validation?.message && (
+        <p className="text-red-400 text-xs">{field.validation.message}</p>
+      )}
+    </div>
+  );
+});
+
+FieldWrapper.displayName = 'FieldWrapper';
+
 const DynamicForm: React.FC<DynamicFormProps> = ({
   fields,
   initialValues = {},
-  onSubmit,
+  onSubmit = () => {},
+  onChange,
   title,
   subtitle,
   submitText = 'Guardar',
@@ -71,16 +79,56 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   const [values, setValues] = useState<Record<string, any>>(initialValues);
   const [newRequirements, setNewRequirements] = useState<Record<string, string>>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Memoizar initialValues para evitar recreaciones innecesarias
+  const memoizedInitialValues = useMemo(() => initialValues, [
+    JSON.stringify(initialValues)
+  ]);
+
+  // Actualizar valores cuando cambien los initialValues
+  useEffect(() => {
+    setValues(prevValues => {
+      // Solo actualizar si realmente hay cambios
+      const hasChanges = Object.keys(memoizedInitialValues).some(
+        key => prevValues[key] !== memoizedInitialValues[key]
+      );
+      
+      if (hasChanges) {
+        return { ...memoizedInitialValues };
+      }
+      
+      return prevValues;
+    });
+  }, [memoizedInitialValues]);
+
+  // Usar ref para evitar bucles infinitos
+  const prevValuesRef = useRef<Record<string, any>>({});
+  const onChangeRef = useRef(onChange);
+  
+  // Mantener la referencia de onChange actualizada
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+  
+  // Llamar a onChange solo cuando los valores realmente cambien
+  useEffect(() => {
+    if (onChangeRef.current && JSON.stringify(prevValuesRef.current) !== JSON.stringify(values)) {
+      prevValuesRef.current = values;
+      onChangeRef.current(values);
+    }
+  }, [values]);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(values);
-  };
+  }, [onSubmit, values]);
 
-  const handleInputChange = (name: string, value: any) => {
-    setValues(prev => ({ ...prev, [name]: value }));
-  };
+  const handleInputChange = useCallback((name: string, value: any) => {
+    setValues(prevValues => {
+      return { ...prevValues, [name]: value };
+    });
+  }, []);
 
-  const handleAddRequirement = (fieldName: string) => {
+  const handleAddRequirement = useCallback((fieldName: string) => {
     const newReq = newRequirements[fieldName]?.trim();
     if (newReq && onRequirementsChange) {
       const currentRequirements = requirementsData[fieldName] || [];
@@ -95,16 +143,16 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       onRequirementsChange(fieldName, [...currentRequirements, ...newRequirementsList]);
       setNewRequirements(prev => ({ ...prev, [fieldName]: '' }));
     }
-  };
+  }, [newRequirements, onRequirementsChange, requirementsData]);
 
-  const handleRemoveRequirement = (fieldName: string, index: number) => {
+  const handleRemoveRequirement = useCallback((fieldName: string, index: number) => {
     if (onRequirementsChange) {
       const currentRequirements = requirementsData[fieldName] || [];
       onRequirementsChange(fieldName, currentRequirements.filter((_, i) => i !== index));
     }
-  };
+  }, [onRequirementsChange, requirementsData]);
 
-  const renderField = (field: FormField) => {
+  const renderField = useCallback((field: FormField) => {
     const value = values[field.name] || '';
     const fieldId = `field-${field.name}`;
 
@@ -130,23 +178,30 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 
       case 'select':
         return (
-          <select
-            id={fieldId}
-            name={field.name}
-            value={value}
-            onChange={(e) => handleInputChange(field.name, e.target.value)}
-            required={field.required}
-            className={fieldClasses}
-          >
-            <option value="" className="bg-gray-800">
-              {field.placeholder || 'Seleccionar...'}
-            </option>
-            {field.options?.map(option => (
-              <option key={option.value} value={option.value} className="bg-gray-800">
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative z-[99999999]">
+            <CustomSelect
+              options={field.options || []}
+              value={value || ''}
+              onChange={(selectedValue) => handleInputChange(field.name, selectedValue)}
+              placeholder={field.placeholder || 'Seleccionar...'}
+              className="w-full"
+              variant="form"
+            />
+          </div>
+        );
+
+      case 'category':
+        return (
+          <div className="relative z-[99999999]">
+            <CategoryPicker
+              categories={field.categoryConfig?.categories || []}
+              selectedCategoryId={value ? parseInt(value) : undefined}
+              onCategorySelect={(category) => handleInputChange(field.name, category ? category.id.toString() : '')}
+              placeholder={field.placeholder || 'Seleccionar categoría...'}
+              loading={field.categoryConfig?.loading || false}
+              variant="form"
+            />
+          </div>
         );
 
       case 'file':
@@ -173,16 +228,40 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       case 'checkbox':
         return (
           <div className="flex items-center space-x-3">
-            <input
-              id={fieldId}
-              type="checkbox"
-              name={field.name}
-              checked={value}
-              onChange={(e) => handleInputChange(field.name, e.target.checked)}
-              required={field.required}
-              className="w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
-            />
-            <label htmlFor={fieldId} className="text-white text-sm">
+            <div className="relative">
+              <input
+                id={fieldId}
+                type="checkbox"
+                name={field.name}
+                checked={value}
+                onChange={(e) => handleInputChange(field.name, e.target.checked)}
+                required={field.required}
+                className="sr-only"
+              />
+              <label
+                htmlFor={fieldId}
+                className={`relative flex items-center justify-center w-5 h-5 rounded-md border-2 transition-all duration-200 cursor-pointer ${
+                  value
+                    ? 'bg-green-400 border-green-600 shadow-lg shadow-green-500/30'
+                    : 'bg-white/10 border-white/30 hover:border-white/50 hover:bg-white/15'
+                }`}
+              >
+                {value && (
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </label>
+            </div>
+            <label htmlFor={fieldId} className="text-white/90 text-sm font-medium cursor-pointer select-none">
               {field.label}
             </label>
           </div>
@@ -193,17 +272,31 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           <div className="space-y-2">
             {field.options?.map(option => (
               <div key={option.value} className="flex items-center space-x-3">
-                <input
-                  id={`${fieldId}-${option.value}`}
-                  type="radio"
-                  name={field.name}
-                  value={option.value}
-                  checked={value === option.value}
-                  onChange={(e) => handleInputChange(field.name, e.target.value)}
-                  required={field.required}
-                  className="w-4 h-4 text-blue-600 bg-white/10 border-white/20 focus:ring-blue-500 focus:ring-2"
-                />
-                <label htmlFor={`${fieldId}-${option.value}`} className="text-white text-sm">
+                <div className="relative">
+                  <input
+                    id={`${fieldId}-${option.value}`}
+                    type="radio"
+                    name={field.name}
+                    value={option.value}
+                    checked={value === option.value}
+                    onChange={(e) => handleInputChange(field.name, e.target.value)}
+                    required={field.required}
+                    className="sr-only"
+                  />
+                  <label
+                    htmlFor={`${fieldId}-${option.value}`}
+                    className={`relative flex items-center justify-center w-4 h-4 rounded-full border-2 transition-all duration-200 cursor-pointer ${
+                      value === option.value
+                        ? 'bg-green-400 border-green-600 shadow-lg shadow-green-500/30'
+                        : 'bg-white/10 border-white/30 hover:border-white/50 hover:bg-white/15'
+                    }`}
+                  >
+                    {value === option.value && (
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    )}
+                  </label>
+                </div>
+                <label htmlFor={`${fieldId}-${option.value}`} className="text-white/90 text-sm font-medium cursor-pointer select-none">
                   {option.label}
                 </label>
               </div>
@@ -219,6 +312,19 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
             placeholder={field.placeholder}
             required={field.required}
             className={field.className}
+          />
+        );
+
+      case 'datetime-local':
+        return (
+          <input
+            id={fieldId}
+            type="datetime-local"
+            name={field.name}
+            value={value}
+            onChange={(e) => handleInputChange(field.name, e.target.value)}
+            required={field.required}
+            className={fieldClasses}
           />
         );
 
@@ -279,6 +385,60 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         );
 
       default:
+        // Manejar campos con máscaras de formateo (como dinero)
+        if (field.formatValue || field.prefix || field.suffix) {
+          const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const rawValue = e.target.value;
+            let formattedValue = rawValue;
+            
+            // Aplicar formato si existe la función
+            if (field.formatValue) {
+              formattedValue = field.formatValue(rawValue);
+            }
+            
+            // Aplicar prefijo y sufijo
+            let displayValue = formattedValue;
+            if (field.prefix) {
+              displayValue = field.prefix + displayValue;
+            }
+            if (field.suffix) {
+              displayValue = displayValue + field.suffix;
+            }
+            
+            // Guardar el valor sin formato para el estado interno
+            const valueToStore = field.parseValue ? field.parseValue(rawValue) : rawValue;
+            handleInputChange(field.name, valueToStore);
+          };
+          
+          // Preparar el valor para mostrar
+          let displayValue = value !== null && value !== undefined ? String(value) : '';
+          if (field.formatValue && (value !== null && value !== undefined)) {
+            displayValue = field.formatValue(value);
+          }
+          if (field.prefix && displayValue) {
+            displayValue = field.prefix + displayValue;
+          }
+          if (field.suffix && displayValue) {
+            displayValue = displayValue + field.suffix;
+          }
+          
+          return (
+            <input
+              id={fieldId}
+              type="text"
+              name={field.name}
+              value={displayValue}
+              onChange={handleCurrencyChange}
+              placeholder={field.placeholder}
+              required={field.required}
+              minLength={field.minLength}
+              maxLength={field.maxLength}
+              className={fieldClasses}
+            />
+          );
+        }
+        
+        // Campo de entrada estándar
         return (
           <input
             id={fieldId}
@@ -298,8 +458,26 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           />
         );
     }
-  };
+  }, [values, newRequirements, handleInputChange, handleAddRequirement, handleRemoveRequirement, requirementsData]);
 
+  // Memoizar la lista de campos para evitar re-renders innecesarios
+  const memoizedFields = useMemo(() => {
+    return fields.map((field) => {
+      const colSpan = field.colSpan || 1;
+      const gridClass = colSpan === 2 ? 'md:col-span-2' : 'md:col-span-1';
+      const fieldValue = values[field.name] || '';
+      
+      return (
+        <FieldWrapper
+          key={field.name}
+          field={field}
+          gridClass={gridClass}
+          fieldValue={fieldValue}
+          renderField={renderField}
+        />
+      );
+    });
+  }, [fields, values, renderField]);
 
   return (
     <div className={className}>
@@ -321,29 +499,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 
         {/* Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {fields.map((field) => {
-            const colSpan = field.colSpan || 1;
-            const gridClass = colSpan === 2 ? 'md:col-span-2' : 'md:col-span-1';
-            const fieldValue = values[field.name] || '';
-            
-            return (
-              <div key={field.name} className={`space-y-2 ${gridClass}`}>
-                {field.type !== 'checkbox' && field.type !== 'radio' && field.type !== 'requirements' && (
-                  <label htmlFor={`field-${field.name}`} className="block text-white/90 text-sm font-semibold">
-                    {field.label}
-                    {field.required && <span className="text-red-400 ml-1">*</span>}
-                  </label>
-                )}
-                {renderField(field)}
-                {field.type === 'password' && field.showPasswordRules && (
-                  <PasswordRules password={fieldValue} />
-                )}
-                {field.validation?.message && (
-                  <p className="text-red-400 text-xs">{field.validation.message}</p>
-                )}
-              </div>
-            );
-          })}
+          {memoizedFields}
         </div>
 
         {/* Actions */}

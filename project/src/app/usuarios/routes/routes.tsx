@@ -1,5 +1,6 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
+import UsuariosList from '../components/UsuariosList';
 
 // Componentes de ejemplo
 const UsuariosPage = () => (
@@ -22,7 +23,7 @@ const PerfilesPage = () => (
 
 const UsuariosRoutes = (
   <Route path="usuarios">
-    <Route index element={<UsuariosPage />} />
+    <Route index element={<UsuariosList />} />
     <Route path="perfiles" element={<PerfilesPage />} />
   </Route>
 );

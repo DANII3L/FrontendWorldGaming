@@ -6,6 +6,7 @@ export const juegosRoutes: NavigationItem = {
   href: '/worldGaming/juegos',
   icon: Gamepad2,
   children: [
-    { name: 'Juegos', href: '/worldGaming/juegos' }
+    { name: 'Juegos', href: '/worldGaming/juegos' },
+    { name: 'Categorías', href: '/worldGaming/juegos/categorias' }
   ]
 };

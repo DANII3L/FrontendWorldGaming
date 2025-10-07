@@ -45,18 +45,21 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
           setPhoneNumber(number);
           // Aquí podrías actualizar el país seleccionado basado en el código
         } else {
-          setPhoneNumber(value);
+          // Si solo hay código de país sin número, limpiar el input
+          setPhoneNumber('');
         }
       } else {
         setPhoneNumber(value);
       }
+    } else {
+      setPhoneNumber('');
     }
   }, [value]);
 
   const handleCountryChange = (country: Country) => {
     setSelectedCountry(country);
     // Actualizar el valor completo con el nuevo código de país
-    const fullNumber = phoneNumber ? `${country.dialCode} ${phoneNumber}` : country.dialCode;
+    const fullNumber = phoneNumber ? `${country.dialCode} ${phoneNumber}` : '';
     onChange(fullNumber);
   };
 
@@ -64,7 +67,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
     const number = e.target.value;
     setPhoneNumber(number);
     // Actualizar el valor completo
-    const fullNumber = number ? `${selectedCountry.dialCode} ${number}` : selectedCountry.dialCode;
+    const fullNumber = number ? `${selectedCountry.dialCode} ${number}` : '';
     onChange(fullNumber);
   };
 

@@ -1,46 +1,78 @@
 import React, { useState } from 'react';
-import { Trophy, Users, Calendar, Star, Play, Zap, Edit, Trash2, GitBranch, X, Bell, TrendingUp } from 'lucide-react';
+import { GitBranch, TrendingUp, Trophy, Users, X, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import DynamicCardList from '../../shared/components/ui/DynamicCardList';
-import { useConfirmation } from '../../shared/contexts/ConfirmationContext';
-import TournamentBracket from '../components/TournamentBracket';
-import StandingsTable from '../components/StandingsTable';
-import BracketVisualChart from '../components/BracketVisualChart';
-import TeamStatsSidebar from '../components/TeamStatsSidebar';
-import { useNotificationCenter } from '../../shared/contexts/NotificationCenterContext';
-import { useNotificationModal } from '../../shared/contexts/NotificationModalContext';
+import LoadingScreen from '../../shared/components/ui/LoadingScreen';
+import TournamentPagination from '../../shared/components/ui/TournamentPagination';
+import TournamentFilters from '../../shared/components/ui/TournamentFilters';
+import HighlightCarousel from '../../shared/components/ui/HighlightCarousel';
+import {
+  TournamentBracket,
+  StandingsTable,
+  BracketVisualChart,
+  TeamStatsSidebar,
+  TournamentCardMinimal,
+  TournamentStatsCards
+} from '../components';
+import { useTorneos, Torneo } from '../hooks/useTorneos';
+import { useMisTorneos, MiTorneo } from '../hooks/useMisTorneos';
+import { useHighlights } from '../hooks/useHighlights';
+import { useJuegos } from '../hooks/useJuegos';
+import { PAGINATION_CONFIG } from '../../shared/constants/pagination';
 
-interface Tournament {
-  id: number;
-  name: string;
-  game: string;
-  prize: string;
-  participants: number;
-  maxParticipants: number;
-  startDate: string;
-  endDate: string;
-  status: 'upcoming' | 'active' | 'completed';
-  difficulty: 'beginner' | 'intermediate' | 'expert';
-  entryFee: number;
-  category: string;
-  image: string;
-  phase?: 'initial' | 'final';
-}
 
 const TorneosPage: React.FC = () => {
-  const { showConfirm } = useConfirmation();
-  const { addNotification } = useNotificationCenter();
-  const { openNotificationModal } = useNotificationModal();
+  const navigate = useNavigate();
+  const {
+    torneos,
+    loading,
+    totalItems,
+    pageNumber,
+    handleSearch,
+    handleFilterChange,
+    handlePageChange: handlePageChangeTorneos,
+    handlePageSizeChange: handlePageSizeChangeTorneos,
+    getFilterOptions,
+    refreshTorneos
+  } = useTorneos();
+
+  const {
+    torneos: misTorneos,
+    loading: loadingMisTorneos,
+    refreshMisTorneos,
+    handleFilterChange: handleFilterChangeMis,
+    handleSearch: handleSearchMisTorneos,
+    handlePageChange: handlePageChangeMis,
+    handleItemsPerPageChange: handleItemsPerPageChangeMis,
+    getFilterOptions: getFilterOptionsMis,
+    paginationInfo: paginationInfoMis
+  } = useMisTorneos();
+
+  const {
+    highlights,
+    loading: loadingHighlights,
+    error: highlightsError
+  } = useHighlights();
+
+  const {
+    getJuegoOptions
+  } = useJuegos();
+
+  const [activeMainTab, setActiveMainTab] = useState<'todos' | 'mis' | 'participando'>('todos');
+  const [sharedPageSize, setSharedPageSize] = useState<number>(6); // Estado compartido para pageSize
   const [showBracketModal, setShowBracketModal] = useState(false);
-  const [selectedTournamentForBracket, setSelectedTournamentForBracket] = useState<Tournament | null>(null);
+  const [selectedTournamentForBracket, setSelectedTournamentForBracket] = useState<Torneo | MiTorneo | null>(null);
   const [showChartModal, setShowChartModal] = useState(false);
-  const [selectedTournamentForChart, setSelectedTournamentForChart] = useState<Tournament | null>(null);
+  const [selectedTournamentForChart, setSelectedTournamentForChart] = useState<Torneo | MiTorneo | null>(null);
   const [activeTab, setActiveTab] = useState<'standings' | 'bracket'>('standings');
   const [showSidebar, setShowSidebar] = useState(false);
   const [selectedTeamForSidebar, setSelectedTeamForSidebar] = useState<string>('');
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [selectedTournamentForInfo, setSelectedTournamentForInfo] = useState<Torneo | MiTorneo | null>(null);
+
+  // Estados de paginación (ahora manejados por los hooks)
 
   const handleTeamClick = (participant: any) => {
-    console.log('=== DEBUG: Team clicked in TorneoPage ===');
-    console.log('Participant:', participant);
     setShowSidebar(true);
     setSelectedTeamForSidebar(participant.name);
   };
@@ -49,436 +81,449 @@ const TorneosPage: React.FC = () => {
     setShowSidebar(false);
     setSelectedTeamForSidebar('');
   };
-  const [tournaments, setTournaments] = useState<Tournament[]>([
-    {
-      id: 1,
-      name: "FPS Championship 2025",
-      game: "Counter-Strike 2",
-      prize: "$10,000",
-      participants: 128,
-      maxParticipants: 256,
-      startDate: "2025-01-15",
-      endDate: "2025-01-20",
-      status: "upcoming",
-      difficulty: "expert",
-      entryFee: 50,
-      category: "FPS",
-      image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=300&fit=crop",
-      phase: "initial"
-    },
-    {
-      id: 2,
-      name: "RPG Master Tournament",
-      game: "World of Warcraft",
-      prize: "$5,000",
-      participants: 64,
-      maxParticipants: 128,
-      startDate: "2025-01-22",
-      endDate: "2025-01-25",
-      status: "upcoming",
-      difficulty: "intermediate",
-      entryFee: 25,
-      category: "RPG",
-      image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=300&fit=crop",
-      phase: "initial"
-    },
-    {
-      id: 3,
-      name: "Strategy Wars",
-      game: "League of Legends",
-      prize: "$15,000",
-      participants: 256,
-      maxParticipants: 512,
-      startDate: "2025-01-10",
-      endDate: "2025-01-18",
-      status: "active",
-      difficulty: "expert",
-      entryFee: 75,
-      category: "MOBA",
-      image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=300&fit=crop",
-      phase: "final"
-    },
-    {
-      id: 4,
-      name: "Battle Royale Elite",
-      game: "Fortnite",
-      prize: "$8,000",
-      participants: 512,
-      maxParticipants: 1024,
-      startDate: "2025-01-05",
-      endDate: "2025-01-12",
-      status: "completed",
-      difficulty: "beginner",
-      entryFee: 15,
-      category: "Battle Royale",
-      image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=300&fit=crop",
-      phase: "final"
-    },
-    {
-      id: 5,
-      name: "Speed Runner Challenge",
-      game: "Valorant",
-      prize: "$12,000",
-      participants: 96,
-      maxParticipants: 128,
-      startDate: "2025-01-28",
-      endDate: "2025-02-02",
-      status: "upcoming",
-      difficulty: "intermediate",
-      entryFee: 40,
-      category: "FPS",
-      image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=300&fit=crop",
-      phase: "initial"
-    },
-    {
-      id: 6,
-      name: "Card Game Masters",
-      game: "Hearthstone",
-      prize: "$6,000",
-      participants: 32,
-      maxParticipants: 64,
-      startDate: "2025-01-30",
-      endDate: "2025-02-01",
-      status: "upcoming",
-      difficulty: "beginner",
-      entryFee: 20,
-      category: "Card Game",
-      image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=300&fit=crop",
-      phase: "initial"
-    }
-  ]);
 
-  const handleDeleteTournament = async (tournamentId: number) => {
-    const confirmed = await showConfirm({
-      title: 'Eliminar Torneo',
-      message: '¿Estás seguro de que quieres eliminar este torneo? Esta acción no se puede deshacer.',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar'
-    });
-
-    if (confirmed) {
-      setTournaments(prev => prev.filter(tournament => tournament.id !== tournamentId));
+  const handleJoinTournament = async (_tournament: Torneo | MiTorneo) => {
+    try {
+      setShowInfoModal(false);
+      // TODO: Implementar llamada a la API para unirse al torneo
+      // await apiService.post(`Torneos/${_tournament.id}/join`);
+    } catch (error) {
+      console.error('Error al unirse al torneo:', error);
     }
   };
 
-  const handleEditTournament = (tournamentId: number) => {
-    // Aquí iría la navegación a la página de edición
-    console.log('Editar torneo:', tournamentId);
-    window.location.href = `/worldGaming/torneos/editar/${tournamentId}`;
+  const handleEditTournament = (tournament: Torneo) => {
+    navigate(`/worldGaming/torneos/editar/${tournament.id}`);
   };
 
-  const handleTestNotification = () => {
-    addNotification({
-      type: 'tournament',
-      title: 'Nuevo Torneo Disponible',
-      message: 'Se ha creado un nuevo torneo de CS2. ¡Inscríbete ahora!',
-      priority: 'high',
-      action: {
-        label: 'Ver Torneo',
-        url: '/torneos/nuevo'
-      }
-    });
+  const handleTournamentClick = (tournament: Torneo | MiTorneo) => {
+    setSelectedTournamentForInfo(tournament);
+    setShowInfoModal(true);
   };
 
-  const handleOpenNotificationModal = () => {
-    openNotificationModal();
+  const getFilteredParticipatingTorneos = () => {
+    return misTorneos.filter(torneo => 
+      torneo.estado?.toLowerCase() === 'activo' || torneo.estado?.toLowerCase() === 'en curso'
+    );
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'upcoming': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'active': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'completed': return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-    }
+  // Función para manejar cambio de pageSize compartido
+  const handleSharedPageSizeChange = (newPageSize: number) => {
+    setSharedPageSize(newPageSize);
+    // Actualizar todos los hooks con el nuevo pageSize
+    handlePageSizeChangeTorneos(newPageSize);
+    handleItemsPerPageChangeMis(newPageSize);
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'beginner': return 'bg-green-500/20 text-green-400';
-      case 'intermediate': return 'bg-yellow-500/20 text-yellow-400';
-      case 'expert': return 'bg-red-500/20 text-red-400';
-      default: return 'bg-gray-500/20 text-gray-400';
-    }
-  };
+  const filterOptions = getFilterOptions();
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'upcoming': return 'PRÓXIMO';
-      case 'active': return 'ACTIVO';
-      case 'completed': return 'COMPLETADO';
-      default: return status.toUpperCase();
-    }
-  };
-
-  const getPhaseColor = (phase: string) => {
-    switch (phase) {
-      case 'initial': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'final': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-    }
-  };
-
-  const getPhaseText = (phase: string) => {
-    switch (phase) {
-      case 'initial': return 'FASE INICIAL';
-      case 'final': return 'FASE FINAL';
-      default: return 'FASE DESCONOCIDA';
-    }
-  };
-
-  const renderTournamentCard = (tournament: Tournament) => (
-    <div className="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 shadow-lg overflow-hidden hover:scale-105 transition-all duration-300 group cursor-pointer hover:border-white/20 relative">
-      {/* Imagen del torneo */}
-      <div className="relative h-48 overflow-hidden group">
-        <img
-          src={tournament.image}
-          alt={tournament.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-
-        {/* Badges */}
-        <div className="absolute top-4 left-4 flex flex-col gap-2">
-          <div className="flex gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(tournament.status)}`}>
-              {getStatusText(tournament.status)}
-            </span>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(tournament.difficulty)}`}>
-              {tournament.difficulty.toUpperCase()}
-            </span>
-          </div>
-          {tournament.phase && (
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getPhaseColor(tournament.phase)}`}>
-              {getPhaseText(tournament.phase)}
-            </span>
-          )}
-        </div>
-
-        {/* Premio */}
-        <div className="absolute top-4 right-4 bg-gradient-to-r from-slate-600 to-slate-700 text-white px-3 py-1 rounded-lg font-bold text-sm border border-slate-500/30">
-          {tournament.prize}
-        </div>
-
-        {/* Botones flotantes para Ver Bracket y Gráfico - Solo en la imagen */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 bg-black/50 backdrop-blur-sm">
-          <div className="flex gap-4">
-            <button
-              onClick={() => {
-                setSelectedTournamentForBracket(tournament);
-                setShowBracketModal(true);
-              }}
-              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-full font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-2xl hover:scale-110 transform"
-            >
-              <GitBranch className="w-6 h-6" />
-              <span className="text-sm font-bold">Bracket</span>
-            </button>
-            <button
-              onClick={() => {
-                setSelectedTournamentForChart(tournament);
-                setShowChartModal(true);
-              }}
-              className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 rounded-full font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-200 flex items-center justify-center gap-2 shadow-2xl hover:scale-110 transform"
-            >
-              <TrendingUp className="w-6 h-6" />
-              <span className="text-sm font-bold">Gráfico</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenido */}
-      <div className="p-6">
-        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-slate-300 transition-colors">
-          {tournament.name}
-        </h3>
-        <p className="text-white/60 text-sm mb-4">{tournament.game}</p>
-
-        {/* Estadísticas */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="flex items-center space-x-2">
-            <Users className="w-4 h-4 text-slate-300" />
-            <span className="text-white/80 text-sm">
-              {tournament.participants}/{tournament.maxParticipants}
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-slate-300" />
-            <span className="text-white/80 text-sm">
-              {new Date(tournament.startDate).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-
-        {/* Progreso de participantes */}
-        <div className="mb-4">
-          <div className="flex justify-between text-xs text-white/60 mb-1">
-            <span>Participantes</span>
-            <span>{Math.round((tournament.participants / tournament.maxParticipants) * 100)}%</span>
-          </div>
-          <div className="w-full bg-white/10 rounded-full h-2">
-            <div
-              className="bg-gradient-to-r from-slate-400 via-slate-500 to-slate-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(tournament.participants / tournament.maxParticipants) * 100}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Línea divisoria */}
-        <div className="border-t border-white/10 my-4"></div>
-
-        {/* Botones de acción */}
-        <div className="flex flex-col space-y-2">
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-            <button className="flex-1 bg-gradient-to-r from-slate-600 to-slate-700 text-white py-2 px-4 rounded-lg font-semibold hover:from-slate-700 hover:to-slate-800 transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg">
-              <Play className="w-4 h-4" />
-              <span>Unirse</span>
-            </button>
-            <button
-              onClick={() => handleEditTournament(tournament.id)}
-              className="bg-blue-500/20 text-blue-400 py-2 px-4 rounded-lg hover:bg-blue-500/30 transition-all duration-200 flex items-center justify-center space-x-2"
-            >
-              <Edit className="w-4 h-4" />
-              <span>Editar</span>
-            </button>
-            <button
-              onClick={() => handleDeleteTournament(tournament.id)}
-              className="bg-red-500/20 text-red-400 py-2 px-4 rounded-lg hover:bg-red-500/30 transition-all duration-200 flex items-center justify-center"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Información adicional */}
-        <div className="mt-4 pt-4 border-t border-white/10">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-white/60">Entrada:</span>
-            <span className="text-white font-semibold">${tournament.entryFee}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const filters = [
-    {
-      type: 'search' as const,
-      key: 'name',
-      placeholder: 'Buscar torneos...'
-    },
-    {
-      type: 'select' as const,
-      key: 'category',
-      placeholder: 'Categoría',
-      options: [
-        { value: 'FPS', label: 'FPS' },
-        { value: 'RPG', label: 'RPG' },
-        { value: 'MOBA', label: 'MOBA' },
-        { value: 'Battle Royale', label: 'Battle Royale' },
-        { value: 'Card Game', label: 'Card Game' }
-      ]
-    },
-    {
-      type: 'select' as const,
-      key: 'status',
-      placeholder: 'Estado',
-      options: [
-        { value: 'upcoming', label: 'Próximos' },
-        { value: 'active', label: 'Activos' },
-        { value: 'completed', label: 'Completados' }
-      ]
-    }
-  ];
+  if (loading && torneos.length === 0) {
+    return (
+      <LoadingScreen
+        title="Cargando Torneos"
+        subtitle="Obteniendo lista de torneos disponibles..."
+        description="Estamos cargando todos los torneos activos para que puedas participar."
+        showDetails={true}
+        details={{
+          title: "Información de carga",
+          items: [
+            {
+              label: 'Estado',
+              value: 'Cargando datos...'
+            },
+            {
+              label: 'Filtros aplicados',
+              value: 'Ninguno'
+            },
+            {
+              label: 'Página actual',
+              value: pageNumber.toString()
+            }
+          ]
+        }}
+        variant="detailed"
+      />
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      {/* DynamicCardList */}
-      <DynamicCardList
-        apiEndpoint=""
-        cardFields={[]}
-        filters={filters}
-        pagination={true}
-        itemsPerPageOptions={[6, 12, 18]}
-        className=""
-        mockData={tournaments}
-        renderCard={renderTournamentCard}
-        title="Torneos"
-        subtitle="Compite con los mejores jugadores del mundo"
-        newButtonText="Crear Torneo"
-        newButtonLink="/worldGaming/torneos/crear"
-      />
+    <div className="w-full px-4 sm:px-6 py-6 sm:py-8" style={{ minWidth: '1500px' }}>
+      {/* Carrusel de Highlights */}
+      {!loadingHighlights && highlights.length > 0 && (
+        <div className="mb-8">
+          <HighlightCarousel
+            items={highlights.map(highlight => ({
+              id: highlight.id,
+              title: highlight.title,
+              description: highlight.description,
+              image: highlight.image,
+              link: highlight.link,
+              type: highlight.type,
+              duration: highlight.duration
+            }))}
+            autoPlay={true}
+            autoPlayInterval={6000}
+            showControls={true}
+            showIndicators={true}
+            className="shadow-2xl"
+          />
+        </div>
+      )}
 
-      {/* Botones de prueba de notificaciones */}
-      <div className="mt-8 flex justify-center gap-4">
-        <button
-          onClick={handleTestNotification}
-          className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex items-center gap-2 shadow-lg"
-        >
-          <Bell className="h-5 w-5" />
-          Probar Notificación
-        </button>
-        <button
-          onClick={handleOpenNotificationModal}
-          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 flex items-center gap-2 shadow-lg"
-        >
-          <Bell className="h-5 w-5" />
-          Abrir Centro de Notificaciones
-        </button>
-      </div>
-
-      {/* Estadísticas generales */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 shadow-lg">
-          <div className="flex items-center space-x-3">
-            <Trophy className="w-8 h-8 text-slate-300" />
-            <div>
-              <p className="text-white/60 text-sm">Total Torneos</p>
-              <p className="text-white text-2xl font-bold">{tournaments.length}</p>
+      {/* Loading del carrusel */}
+      {loadingHighlights && (
+        <div className="mb-8">
+          <div className="w-full h-64 md:h-80 lg:h-96 bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 shadow-2xl flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+              <p className="text-white/60">Cargando highlights...</p>
             </div>
           </div>
         </div>
-        <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 shadow-lg">
-          <div className="flex items-center space-x-3">
-            <Users className="w-8 h-8 text-slate-300" />
+      )}
+
+      {/* Error del carrusel */}
+      {highlightsError && (
+        <div className="mb-8">
+          <div className="w-full h-64 md:h-80 lg:h-96 bg-red-500/10 backdrop-blur-lg rounded-2xl border border-red-500/20 shadow-2xl flex items-center justify-center">
+            <div className="text-center">
+              <X className="w-12 h-12 text-red-400 mx-auto mb-4" />
+              <p className="text-red-400 font-semibold mb-2">Error al cargar highlights</p>
+              <p className="text-white/60 text-sm">{highlightsError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+      {/* Header con título y descripción */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
             <div>
-              <p className="text-white/60 text-sm">Participantes</p>
-              <p className="text-white text-2xl font-bold">
-                {tournaments.reduce((sum, t) => sum + t.participants, 0)}
+            <h1 className="text-xl font-bold text-white">
+              {activeMainTab === 'todos' ? 'Todos los torneos' :
+                activeMainTab === 'mis' ? 'Mis torneos' : 'Torneos en los que participas'}
+            </h1>
+            <p className="text-white/60 mt-1">
+              {activeMainTab === 'todos'
+                ? 'Compite con los mejores jugadores del mundo'
+                : activeMainTab === 'mis'
+                  ? 'Torneos en los que participas o has participado'
+                  : 'Torneos en los que estás actualmente participando'
+              }
               </p>
             </div>
+          {activeMainTab === 'mis' && (
+            <button
+              onClick={() => navigate('/worldGaming/torneos/crear')}
+              className="flex items-center gap-2 px-6 py-3 bg-green-500/10 backdrop-blur-sm border border-green-400/30 text-white rounded-lg hover:bg-green-500/20 transition-all duration-200 font-semibold"
+            >
+              <span>Crear Torneo</span>
+            </button>
+          )}
           </div>
         </div>
-        <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 shadow-lg">
-          <div className="flex items-center space-x-3">
-            <Star className="w-8 h-8 text-slate-300" />
-            <div>
-              <p className="text-white/60 text-sm">Premio Total</p>
-              <p className="text-white text-2xl font-bold">$56,000</p>
+
+      {/* Tabs de contenido */}
+      <div className="mb-8">
+        <div className="flex border-b border-white/10">
+          <button
+            onClick={() => setActiveMainTab('todos')}
+            className={`flex-1 px-6 py-4 text-sm font-semibold transition-all duration-200 ${activeMainTab === 'todos'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Trophy className="w-4 h-4" />
+              <span>Todos los Torneos</span>
             </div>
-          </div>
-        </div>
-        <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 shadow-lg">
-          <div className="flex items-center space-x-3">
-            <Zap className="w-8 h-8 text-slate-300" />
-            <div>
-              <p className="text-white/60 text-sm">Activos</p>
-              <p className="text-white text-2xl font-bold">
-                {tournaments.filter(t => t.status === 'active').length}
-              </p>
+          </button>
+          <button
+            onClick={() => setActiveMainTab('mis')}
+            className={`flex-1 px-6 py-4 text-sm font-semibold transition-all duration-200 ${activeMainTab === 'mis'
+              ? 'text-white border-b-2 border-green-500'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <User className="w-4 h-4" />
+              <span>Mis Torneos</span>
             </div>
+          </button>
+          <button
+            onClick={() => setActiveMainTab('participando')}
+            className={`flex-1 px-6 py-4 text-sm font-semibold transition-all duration-200 ${activeMainTab === 'participando'
+              ? 'text-white border-b-2 border-purple-500'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Users className="w-4 h-4" />
+              <span>Participando</span>
           </div>
+          </button>
         </div>
       </div>
 
-      {/* Modal del Bracket */}
+      {activeMainTab === 'todos' ? (
+        <div className="space-y-6">
+          <DynamicCardList
+            filters={[
+              {
+                type: 'search' as const,
+                key: 'search',
+                placeholder: 'Buscar torneos...',
+                onChange: (value: string) => handleSearch(value)
+              },
+              {
+                type: 'select' as const,
+                key: 'estado',
+                placeholder: 'Todos los estados',
+                options: filterOptions.estado,
+                onChange: (value: string) => handleFilterChange('Estado', value)
+              },
+              {
+                type: 'select' as const,
+                key: 'dificultad',
+                placeholder: 'Todas las dificultades',
+                options: filterOptions.dificultad,
+                onChange: (value: string) => handleFilterChange('Dificultad', value)
+              },
+              {
+                type: 'select' as const,
+                key: 'juego',
+                placeholder: 'Todos los juegos',
+                options: getJuegoOptions(),
+                onChange: (value: string) => handleFilterChange('JuegoId', value)
+              }
+            ]}
+            pagination={true}
+            itemsPerPageOptions={PAGINATION_CONFIG.pageSizeOptions as unknown as number[]}
+            data={torneos}
+            renderCard={(tournament: Torneo) => (
+              <TournamentCardMinimal
+                tournament={tournament}
+                onTournamentClick={handleTournamentClick}
+                onChartClick={(tournament) => {
+                  setSelectedTournamentForChart(tournament);
+                  setShowChartModal(true);
+                }}
+                showStatusChip={false}
+              />
+            )}
+            isLoading={loading}
+            gridClassName="grid-cols-1 lg:grid-cols-2 gap-6"
+            renderFilters={TournamentFilters}
+            renderPagination={TournamentPagination}
+        serverPagination={{
+              totalRecords: totalItems,
+          pageNumber: pageNumber,
+          pageSize: sharedPageSize
+        }}
+            onPaginationChange={(page, size) => {
+              if (size && size !== sharedPageSize) {
+                // Si cambió el tamaño de página, usar función compartida
+                handleSharedPageSizeChange(size);
+              } else {
+                // Si solo cambió la página, usar handlePageChange
+                handlePageChangeTorneos(page);
+              }
+            }}
+            onRefresh={refreshTorneos}
+          />
+
+          {/* Cards de Estadísticas al final */}
+          <TournamentStatsCards
+            torneos={torneos}
+            title="Estadísticas de Todos los Torneos"
+          />
+        </div>
+      ) : activeMainTab === 'mis' ? (
+        <div className="space-y-6">
+          <DynamicCardList
+            filters={[
+              {
+                type: 'search' as const,
+                key: 'search',
+                placeholder: 'Buscar mis torneos...',
+                onChange: (value: string) => {
+                  handleSearchMisTorneos(value);
+                }
+              },
+              {
+                type: 'select' as const,
+                key: 'estado',
+                placeholder: 'Todos los estados',
+                options: getFilterOptionsMis().estado,
+                onChange: (value: string) => {
+                  handleFilterChangeMis('Estado', value);
+                }
+              },
+              {
+                type: 'select' as const,
+                key: 'dificultad',
+                placeholder: 'Todas las dificultades',
+                options: getFilterOptionsMis().dificultad,
+                onChange: (value: string) => {
+                  handleFilterChangeMis('Dificultad', value);
+                }
+              },
+              {
+                type: 'select' as const,
+                key: 'juego',
+                placeholder: 'Todos los juegos',
+                options: getJuegoOptions(),
+                onChange: (value: string) => {
+                  handleFilterChangeMis('JuegoId', value);
+                }
+              }
+            ]}
+            pagination={true}
+            itemsPerPageOptions={PAGINATION_CONFIG.pageSizeOptions as unknown as number[]}
+            data={misTorneos}
+            renderCard={(tournament: MiTorneo) => (
+              <TournamentCardMinimal
+                tournament={tournament}
+                onTournamentClick={handleTournamentClick}
+                onBracketClick={(tournament) => {
+                  setSelectedTournamentForBracket(tournament);
+                  setShowBracketModal(true);
+                }}
+                onChartClick={(tournament) => {
+                  setSelectedTournamentForChart(tournament);
+                  setShowChartModal(true);
+                }}
+                onEdit={handleEditTournament}
+                onToggle={(_tournament, _newStatus) => {
+                  refreshMisTorneos();
+                }}
+              />
+            )}
+            title=""
+            subtitle=""
+            newButtonText=""
+            newButtonLink=""
+            isLoading={loadingMisTorneos}
+            gridClassName="grid-cols-1 lg:grid-cols-2 gap-6"
+            renderFilters={TournamentFilters}
+            renderPagination={TournamentPagination}
+            serverPagination={{
+              totalRecords: paginationInfoMis.totalRecords,
+              pageNumber: paginationInfoMis.pageNumber,
+              pageSize: sharedPageSize
+            }}
+            onPaginationChange={(page, size) => {
+              if (size && size !== sharedPageSize) {
+                // Si cambió el tamaño de página, usar función compartida
+                handleSharedPageSizeChange(size);
+              } else {
+                // Si solo cambió la página, usar handlePageChange
+                handlePageChangeMis(page);
+              }
+            }}
+            onRefresh={refreshMisTorneos}
+          />
+          
+          {/* Cards de Estadísticas al final */}
+          <TournamentStatsCards 
+            torneos={misTorneos} 
+            title="Estadísticas de Mis Torneos" 
+          />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <DynamicCardList
+            filters={[
+              {
+                type: 'search' as const,
+                key: 'search',
+                placeholder: 'Buscar torneos participando...',
+                onChange: (value: string) => {
+                  handleSearchMisTorneos(value);
+                }
+              },
+              {
+                type: 'select' as const,
+                key: 'estado',
+                placeholder: 'Todos los estados',
+                options: getFilterOptionsMis().estado,
+                onChange: (value: string) => {
+                  handleFilterChangeMis('Estado', value);
+                }
+              },
+              {
+                type: 'select' as const,
+                key: 'dificultad',
+                placeholder: 'Todas las dificultades',
+                options: getFilterOptionsMis().dificultad,
+                onChange: (value: string) => {
+                  handleFilterChangeMis('Dificultad', value);
+                }
+              },
+              {
+                type: 'select' as const,
+                key: 'juego',
+                placeholder: 'Todos los juegos',
+                options: getJuegoOptions(),
+                onChange: (value: string) => {
+                  handleFilterChangeMis('JuegoId', value);
+                }
+              }
+            ]}
+            pagination={true}
+            itemsPerPageOptions={PAGINATION_CONFIG.pageSizeOptions as unknown as number[]}
+            data={misTorneos}
+            renderCard={(tournament: MiTorneo) => (
+              <TournamentCardMinimal
+                tournament={tournament}
+                onTournamentClick={handleTournamentClick}
+                onChartClick={(tournament) => {
+                  setSelectedTournamentForChart(tournament);
+                  setShowChartModal(true);
+                }}
+              />
+            )}
+            title=""
+            subtitle=""
+            newButtonText=""
+            newButtonLink=""
+            isLoading={loadingMisTorneos}
+            gridClassName="grid-cols-1 lg:grid-cols-2 gap-6"
+            renderFilters={TournamentFilters}
+            renderPagination={TournamentPagination}
+            serverPagination={{
+              totalRecords: paginationInfoMis.totalRecords,
+              pageNumber: paginationInfoMis.pageNumber,
+              pageSize: sharedPageSize
+            }}
+            onPaginationChange={(page, size) => {
+              if (size && size !== sharedPageSize) {
+                // Si cambió el tamaño de página, usar función compartida
+                handleSharedPageSizeChange(size);
+              } else {
+                // Si solo cambió la página, usar handlePageChange
+                handlePageChangeMis(page);
+              }
+            }}
+            onRefresh={refreshMisTorneos}
+          />
+
+          {/* Cards de Estadísticas al final */}
+          <TournamentStatsCards
+            torneos={getFilteredParticipatingTorneos()}
+            title="Estadísticas de Torneos Participando"
+          />
+        </div>
+      )}
       {showBracketModal && selectedTournamentForBracket && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900/95 backdrop-blur-lg rounded-2xl border border-white/10 shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-white/10">
               <div>
                 <h2 className="text-2xl font-bold text-white">Bracket del Torneo</h2>
-                <p className="text-white/80 mt-1">{selectedTournamentForBracket.name}</p>
+                <p className="text-white/80 mt-1">{selectedTournamentForBracket.nombre}</p>
               </div>
               <button
                 onClick={() => setShowBracketModal(false)}
@@ -490,55 +535,54 @@ const TorneosPage: React.FC = () => {
             <div className="p-6 overflow-auto max-h-[calc(90vh-120px)]">
               <TournamentBracket
                 tournamentId={selectedTournamentForBracket.id.toString()}
-                tournamentName={selectedTournamentForBracket.name}
+                tournamentName={selectedTournamentForBracket.nombre}
                 format="single_elimination"
                 participants={[
                   'Estral Esports', 'Timbers Esports', 'Atheris Esports', 'Pixel Esports',
                   'Chivas Esports', 'Infinity Esports', 'Mexico Esports Team'
                 ]}
-                                  matches={[
-                    {
-                      id: '1',
-                      round: 1,
-                      matchNumber: 1,
-                      player1: 'Estral Esports',
-                      player2: 'Timbers Esports',
-                      player1Score: 16,
-                      player2Score: 14,
-                      status: 'completed',
-                      winner: 'Estral Esports',
-                      scheduledTime: '2024-03-15 14:00',
-                      duration: '45 min'
-                    },
-                    {
-                      id: '2',
-                      round: 1,
-                      matchNumber: 2,
-                      player1: 'Atheris Esports',
-                      player2: 'Pixel Esports',
-                      player1Score: 0,
-                      player2Score: 0,
-                      status: 'pending',
-                      winner: '',
-                      scheduledTime: '2024-03-15 16:00',
-                      duration: '45 min'
-                    },
-                    {
-                      id: '3',
-                      round: 2,
-                      matchNumber: 1,
-                      player1: 'Estral Esports',
-                      player2: 'TBD',
-                      player1Score: 0,
-                      player2Score: 0,
-                      status: 'pending',
-                      winner: '',
-                      scheduledTime: '2024-03-16 14:00',
-                      duration: '45 min'
-                    }
-                  ]}
-                onMatchUpdate={(matchId: string, winner: string, scores: { player1: number, player2: number }) => {
-                  console.log('Match updated:', matchId, winner, scores);
+                matches={[
+                  {
+                    id: '1',
+                    round: 1,
+                    matchNumber: 1,
+                    player1: 'Estral Esports',
+                    player2: 'Timbers Esports',
+                    player1Score: 16,
+                    player2Score: 14,
+                    status: 'completed',
+                    winner: 'Estral Esports',
+                    scheduledTime: '2024-03-15 14:00',
+                    duration: '45 min'
+                  },
+                  {
+                    id: '2',
+                    round: 1,
+                    matchNumber: 2,
+                    player1: 'Atheris Esports',
+                    player2: 'Pixel Esports',
+                    player1Score: 0,
+                    player2Score: 0,
+                    status: 'pending',
+                    winner: '',
+                    scheduledTime: '2024-03-15 16:00',
+                    duration: '45 min'
+                  },
+                  {
+                    id: '3',
+                    round: 2,
+                    matchNumber: 1,
+                    player1: 'Estral Esports',
+                    player2: 'TBD',
+                    player1Score: 0,
+                    player2Score: 0,
+                    status: 'pending',
+                    winner: '',
+                    scheduledTime: '2024-03-16 14:00',
+                    duration: '45 min'
+                  }
+                ]}
+                onMatchUpdate={(_matchId: string, _winner: string, _scores: { player1: number, player2: number }) => {
                   // Aquí se actualizaría el resultado en la base de datos
                 }}
               />
@@ -546,15 +590,13 @@ const TorneosPage: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Modal del Gráfico */}
       {showChartModal && selectedTournamentForChart && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowChartModal(false)}>
           <div className="bg-gray-900/95 backdrop-blur-lg rounded-2xl border border-white/10 shadow-2xl w-full max-w-7xl h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 border-b border-white/10">
               <div>
                 <h2 className="text-2xl font-bold text-white">Gráfico del Torneo</h2>
-                <p className="text-white/80 mt-1">{selectedTournamentForChart.name}</p>
+                <p className="text-white/80 mt-1">{selectedTournamentForChart.nombre}</p>
               </div>
               <button
                 onClick={() => setShowChartModal(false)}
@@ -613,7 +655,7 @@ const TorneosPage: React.FC = () => {
                     { participant: { id: '6', name: 'Infinity Esports', team: 'Infinity', seed: 6, icon: '♾️' }, position: 6, points: 4, matchesPlayed: 6, perfectWins: 1, wins: 0, draws: 1, losses: 4, mapDifference: -5, roundDifference: -17 },
                     { participant: { id: '7', name: 'Mexico Esports Team', team: 'MET', seed: 7, icon: '🦅' }, position: 7, points: 2, matchesPlayed: 6, perfectWins: 0, wins: 0, draws: 2, losses: 4, mapDifference: -7, roundDifference: -33 }
                   ]}
-                  tournamentName={selectedTournamentForChart.name}
+                  tournamentName={selectedTournamentForChart.nombre}
                   onClose={() => setShowChartModal(false)}
                   isEmbedded={true}
                   onTeamClick={handleTeamClick}
@@ -647,17 +689,180 @@ const TorneosPage: React.FC = () => {
                       scheduledTime: '2024-03-15 16:00'
                     }
                   ]}
-                  tournamentName={selectedTournamentForChart.name}
+                  tournamentName={selectedTournamentForChart.nombre}
                   format="single_elimination"
-                  onSaveConfiguration={(matches) => console.log('Configuration saved:', matches)}
+                  onSaveConfiguration={(_matches) => {
+                  }}
                   onClose={() => setShowChartModal(false)}
                   isEmbedded={true}
                   currentPhase="final"
-                  onPhaseChange={(phase) => console.log('Phase changed to:', phase)}
+                  onPhaseChange={(_phase) => {
+                  }}
                   isReadOnly={true}
                 />
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Información Detallada */}
+      {showInfoModal && selectedTournamentForInfo && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900/95 backdrop-blur-lg rounded-2xl border border-white/10 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Información del Torneo</h2>
+                <p className="text-white/80 mt-1">{selectedTournamentForInfo.nombre}</p>
+              </div>
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors duration-200"
+              >
+                <X className="h-6 w-6 text-white" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-auto max-h-[calc(90vh-120px)] space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-white font-semibold mb-2">Información General</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Juego:</span>
+                        <span className="text-white">{selectedTournamentForInfo.juegoNombre || 'No especificado'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Dificultad:</span>
+                        <span className="text-white capitalize">{selectedTournamentForInfo.dificultad || 'Intermedio'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-white font-semibold mb-2">Premios y Costos</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Premio Total:</span>
+                        <span className="text-white font-semibold">${selectedTournamentForInfo.premio || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Costo de Entrada:</span>
+                        <span className="text-white font-semibold">${selectedTournamentForInfo.costoEntrada || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Participantes y Fechas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-white font-semibold mb-2">Participantes</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Registrados:</span>
+                      <span className="text-white">{selectedTournamentForInfo.participantes || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Máximo:</span>
+                      <span className="text-white">{selectedTournamentForInfo.maxParticipantes || 120}</span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-2 mt-2">
+                      <div
+                        className="bg-gradient-to-r from-slate-400 via-slate-500 to-slate-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${((selectedTournamentForInfo.participantes || 0) / (selectedTournamentForInfo.maxParticipantes || 120)) * 100}%` }}
+                      />
+                    </div>
+                    <div className="text-center text-xs text-white/60 mt-1">
+                      {Math.round(((selectedTournamentForInfo.participantes || 0) / (selectedTournamentForInfo.maxParticipantes || 120)) * 100)}% completo
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-white font-semibold mb-2">Fechas Importantes</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Fecha de Inicio:</span>
+                      <span className="text-white">
+                        {selectedTournamentForInfo.fechaInicio ? new Date(selectedTournamentForInfo.fechaInicio).toLocaleDateString() : 'Por definir'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Fecha de Fin:</span>
+                      <span className="text-white">
+                        {selectedTournamentForInfo.fechaFin ? new Date(selectedTournamentForInfo.fechaFin).toLocaleDateString() : 'Por definir'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Descripción adicional si existe */}
+              {(selectedTournamentForInfo.descripcion || selectedTournamentForInfo.reglas) && (
+                <div>
+                  <h3 className="text-white font-semibold mb-2">Información Adicional</h3>
+                  <div className="space-y-3 text-sm">
+                    {selectedTournamentForInfo.descripcion && (
+                      <div>
+                        <span className="text-white/60 font-medium">Descripción:</span>
+                        <p className="text-white/80 mt-1">{selectedTournamentForInfo.descripcion}</p>
+                      </div>
+                    )}
+                    {selectedTournamentForInfo.reglas && (
+                      <div>
+                        <span className="text-white/60 font-medium">Reglas:</span>
+                        <p className="text-white/80 mt-1">{selectedTournamentForInfo.reglas}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Botón de Unirse - Solo mostrar en tab "Todos los Torneos" */}
+            {activeMainTab === 'todos' && selectedTournamentForInfo && (
+              <div className="p-6 border-t border-white/10">
+                {(() => {
+                  const availableSpots = (selectedTournamentForInfo.maxParticipantes || 120) - (selectedTournamentForInfo.participantes || 0);
+                  const hasAvailableSpots = availableSpots > 0;
+                  const isActive = selectedTournamentForInfo.isActive;
+                  const canJoin = hasAvailableSpots && isActive;
+
+                  return (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <p className="text-white/60 text-sm">Cupos disponibles</p>
+                          <p className={`text-lg font-bold ${hasAvailableSpots ? 'text-green-400' : 'text-red-400'}`}>
+                            {availableSpots}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleJoinTournament(selectedTournamentForInfo)}
+                        disabled={!canJoin}
+                        className={`
+                          px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2
+                          ${canJoin
+                            ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl'
+                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          }
+                        `}
+                      >
+                        <Users className="w-4 h-4" />
+                        {canJoin ? 'Unirse al Torneo' : 'No disponible'}
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -667,11 +872,12 @@ const TorneosPage: React.FC = () => {
         <TeamStatsSidebar
           isOpen={showSidebar}
           onClose={handleCloseSidebar}
-          tournamentName={selectedTournamentForChart?.name || 'Torneo'}
+          tournamentName={selectedTournamentForChart?.nombre || 'Torneo'}
           initialTeam={selectedTeamForSidebar}
           showBackButton={false}
         />
       )}
+
     </div>
   );
 };

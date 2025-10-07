@@ -1,5 +1,5 @@
 import React from "react";
-import { useColorPalette } from "../../shared/contexts/ColorPaletteContext";
+import { useColorPalette } from "../../shared/contexts";
 
 const ContactSection: React.FC = () => {
     const { currentPalette } = useColorPalette();
@@ -8,21 +8,9 @@ const ContactSection: React.FC = () => {
         <section
             id="contacto"
             className="py-24 relative overflow-hidden"
-            style={{
-                background: `linear-gradient(135deg, ${currentPalette.primary}30 0%, ${currentPalette.secondary}30 50%, ${currentPalette.tertiary}30 100%)`
-            }}
         >
-            {/* Overlay de transición superior */}
-            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/60 via-black/20 to-transparent z-10"></div>
-
             {/* Efectos de fondo */}
             <div className="absolute inset-0">
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        background: `linear-gradient(135deg, ${currentPalette.primary} 0%, ${currentPalette.secondary} 50%, ${currentPalette.tertiary} 100%)`
-                    }}
-                ></div>
                 <div className="absolute top-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
                 <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
             </div>

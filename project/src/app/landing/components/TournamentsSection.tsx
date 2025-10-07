@@ -1,5 +1,5 @@
 import React from "react";
-import { useColorPalette } from "../../shared/contexts/ColorPaletteContext";
+import { useColorPalette } from "../../shared/contexts";
 
 const TournamentsSection: React.FC = () => {
   const { currentPalette } = useColorPalette();
@@ -8,12 +8,7 @@ const TournamentsSection: React.FC = () => {
     <section
         id="torneos"
         className="py-24 relative overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${currentPalette.primary}30 0%, ${currentPalette.secondary}30 50%, ${currentPalette.tertiary}30 100%)`
-        }}
       >
-        {/* Overlay de transición superior */}
-        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/60 via-black/20 to-transparent z-10"></div>
 
         {/* Efectos de fondo */}
         <div className="absolute inset-0">

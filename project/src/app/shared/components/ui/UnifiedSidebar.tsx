@@ -28,8 +28,9 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = ({
   const location = useLocation();
   const { logout, user } = useAuth();
   
-  // Usar la navegación automática solo en modo dinámico
-  const navigationItems = isDynamic ? useAutoNavigation() : [];
+  // Siempre llamar el hook, pero usar el resultado condicionalmente
+  const autoNavigationItems = useAutoNavigation();
+  const navigationItems = isDynamic ? autoNavigationItems : [];
   
   // Estado para controlar qué submenús están abiertos
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());

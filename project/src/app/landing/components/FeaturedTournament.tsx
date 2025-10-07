@@ -1,7 +1,6 @@
 import React from 'react';
 import { Trophy, Users, Calendar, DollarSign, Star } from 'lucide-react';
-import { useColorPalette } from '../../shared/contexts/ColorPaletteContext';
-import { useGame } from '../../shared/contexts/GameContext';
+import { useColorPalette, useGame } from '../../shared/contexts';
 import '../../../index.css';
 
 interface TournamentData {
@@ -132,16 +131,9 @@ const FeaturedTournament: React.FC = () => {
 
   return (
     <section id="torneoDestacado" className="relative py-24 overflow-hidden">
-      {/* Overlay de transición superior */}
 
       {/* Efectos de fondo */}
       <div className="absolute inset-0">
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(135deg, ${currentPalette.primary} 0%, ${currentPalette.secondary} 50%, ${currentPalette.tertiary} 100%)`
-          }}
-        ></div>
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
       </div>

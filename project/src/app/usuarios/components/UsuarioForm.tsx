@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DynamicForm from '../../shared/components/ui/DynamicForm';
+import LoadingScreen from '../../shared/components/ui/LoadingScreen';
+import CountrySelector from '../../shared/components/ui/CountrySelector';
 import { IFieldConfig } from '../../shared/interface/IFieldConfig';
 import { useNotification } from '../../shared/contexts/NotificationContext';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
@@ -10,10 +12,10 @@ import { createUser, getUserById, updateUser } from '../../configuracion/service
 const UsuarioForm: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [isLoadingUser, setIsLoadingUser] = useState(false);
     const [formValues, setFormValues] = useState({
         Nombre: '',
         Apellidos: '',
-        Identificacion: '',
         Correo: '',
         Telefono: '',
         Password: '',
@@ -33,7 +35,6 @@ const UsuarioForm: React.FC = () => {
     const fields: IFieldConfig[] = [
         { name: 'Nombre', label: 'Nombre', type: 'text', required: true, colSpan: 1, maxLength: 20 },
         { name: 'Apellidos', label: 'Apellidos', type: 'text', required: true, colSpan: 1 },
-        { name: 'Identificacion', label: 'Identificación', type: 'number', required: true, colSpan: 2, maxLength: 20 },
         { name: 'Correo', label: 'Correo Electrónico', type: 'email', required: true, colSpan: 2 },
         { name: 'Telefono', label: 'Teléfono', type: 'number', required: true, colSpan: 1 },
         { name: 'Rol', label: 'Rol', type: 'select', required: true, colSpan: 1, options: [
@@ -48,14 +49,13 @@ const UsuarioForm: React.FC = () => {
     React.useEffect(() => {
         if (entidadId) {
             setIsEditMode(true);
-            setIsLoading(true);
+            setIsLoadingUser(true);
             getUserById(entidadId)
                 .then((user) => {
                     if (user) {
                         setFormValues({
                             Nombre: user.data.nombre || '',
                             Apellidos: user.data.apellidos || '',
-                            Identificacion: user.data.identificacion || '',
                             Correo: user.data.correo || '',
                             Telefono: user.data.telefono || '',
                             Password: '',
@@ -70,7 +70,7 @@ const UsuarioForm: React.FC = () => {
                     addNotification('Error al cargar el usuario.', 'error');
                     navigate('/configuracion/usuarios');
                 })
-                .finally(() => setIsLoading(false));
+                .finally(() => setIsLoadingUser(false));
         }
     }, [entidadId]);
 
@@ -105,6 +105,48 @@ const UsuarioForm: React.FC = () => {
         }
     };
 
+    // Mostrar loading al cargar usuario en modo edición
+    if (isEditMode && isLoadingUser) {
+        return (
+            <LoadingScreen
+                title="Cargando Usuario"
+                subtitle="Obteniendo información del usuario..."
+                description="Estamos cargando los datos del usuario para su edición."
+                variant="detailed"
+            />
+        );
+    }
+
+    // Mostrar loading al guardar
+    if (isLoading) {
+        return (
+            <LoadingScreen
+                title={isEditMode ? "Actualizando Usuario" : "Creando Usuario"}
+                subtitle={isEditMode ? "Guardando los cambios del usuario..." : "Procesando la información del usuario..."}
+                description={isEditMode ? "Estamos guardando todos los cambios realizados." : "Estamos guardando todos los datos del usuario. Esto puede tomar unos momentos."}
+                showDetails={true}
+                details={{
+                    title: `Usuario: ${formValues.Nombre || 'Sin nombre'}`,
+                    items: [
+                        {
+                            label: 'Correo',
+                            value: formValues.Correo || 'Sin correo'
+                        },
+                        {
+                            label: 'Rol',
+                            value: RolTipo[parseInt(formValues.Rol)] || 'Usuario'
+                        },
+                        {
+                            label: 'Teléfono',
+                            value: formValues.Telefono || 'Sin teléfono'
+                        }
+                    ]
+                }}
+                variant="detailed"
+            />
+        );
+    }
+
     return (
         <div className="min-h-screen bg-background">
             <div className="max-w-4xl mx-auto p-6">
@@ -127,40 +169,36 @@ const UsuarioForm: React.FC = () => {
 
                 {/* Formulario */}
                 <div className="bg-card-background backdrop-blur-lg p-8 rounded-2xl border border-border">
-                    {isLoading ? (
-                        <div className="text-center py-8">Cargando datos del usuario...</div>
-                    ) : (
-                        <DynamicForm
-                            fields={fields}
-                            initialValues={formValues}
-                            onSubmit={handleSubmit}
-                            submitText={isEditMode ? 'Actualizar Usuario' : 'Crear Usuario'}
-                            renderSubmitButton={({ submitText }) => (
-                                <div className="flex flex-col items-center gap-4 md:col-span-2">
-                                    <button
-                                        type="submit"
-                                        disabled={isLoading}
-                                        className="w-full bg-gradient-to-r from-orange-primary to-red-primary text-white py-3 px-6 rounded-xl hover:opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl font-medium"
-                                    >
-                                        {isLoading ? (
-                                            <div className="flex items-center justify-center">
-                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                                {submitText}
-                                            </div>
-                                        ) : (
-                                            submitText
-                                        )}
-                                    </button>
-                                    <p className="text-sm text-text-secondary mt-4">
-                                        ¿Necesitas ayuda?{' '}
-                                        <Link to="/configuracion" className="font-medium text-orange-primary hover:underline">
-                                            Ver configuración
-                                        </Link>
-                                    </p>
-                                </div>
-                            )}
-                        />
-                    )}
+                    <DynamicForm
+                        fields={fields}
+                        initialValues={formValues}
+                        onSubmit={handleSubmit}
+                        submitText={isEditMode ? 'Actualizar Usuario' : 'Crear Usuario'}
+                        renderSubmitButton={({ submitText }) => (
+                            <div className="flex flex-col items-center gap-4 md:col-span-2">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full bg-gradient-to-r from-orange-primary to-red-primary text-white py-3 px-6 rounded-xl hover:opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl font-medium"
+                                >
+                                    {isLoading ? (
+                                        <div className="flex items-center justify-center">
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                            {submitText}
+                                        </div>
+                                    ) : (
+                                        submitText
+                                    )}
+                                </button>
+                                <p className="text-sm text-text-secondary mt-4">
+                                    ¿Necesitas ayuda?{' '}
+                                    <Link to="/configuracion" className="font-medium text-orange-primary hover:underline">
+                                        Ver configuración
+                                    </Link>
+                                </p>
+                            </div>
+                        )}
+                    />
                 </div>
             </div>
         </div>

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { apiService } from '../../services/apiService';
 import { Card } from './Card';
 import Pagination from '../Pagination';
 import { PlusIcon } from '@heroicons/react/24/outline';
-import { useNotification } from '../../contexts/NotificationContext';
 import { Link } from 'react-router-dom';
 import { RefreshCw, LucideIcon } from 'lucide-react';
+import { PAGINATION_CONFIG } from '../../constants/pagination';
+import CategoryPicker from './CategoryPicker';
+import CustomSelect from './CustomSelect';
 
 interface CardField {
   label: string;
@@ -14,15 +15,16 @@ interface CardField {
 }
 
 interface FilterConfig {
-  type: 'search' | 'select';
+  type: 'search' | 'select' | 'category-picker';
   key: string;
   placeholder?: string;
   options?: { value: string; label: string }[];
+  categories?: Array<{ id: number; nombre: string; descripcion: string; color: string }>;
+  loading?: boolean;
+  onChange?: (value: any) => void;
 }
 
 interface DynamicCardListProps {
-  // Modo API (comportamiento original)
-  apiEndpoint?: string;
   cardFields?: CardField[];
   filters?: FilterConfig[];
   pagination?: boolean;
@@ -38,22 +40,48 @@ interface DynamicCardListProps {
   newButtonLink?: string;
   newButtonState?: any;
   onNew?: () => void;
-  additionalParams?: { [key: string]: any };
   isLoading?: boolean;
+  onRefresh?: (pageNumber?: number, pageSize?: number) => void;
+  onPaginationChange?: (pageNumber: number, pageSize: number) => void;
   
-  // Modo datos estáticos (nuevo comportamiento)
+  // Información de paginación del servidor
+  serverPagination?: {
+    totalRecords: number;
+    pageNumber: number;
+    pageSize: number;
+  };
+  
+  // Datos estáticos
   data?: any[];
   emptyMessage?: string;
   emptyIcon?: LucideIcon;
+  
+  // Nuevas props para personalización
+  gridClassName?: string; // Clases CSS para el grid de cards
+  renderPagination?: (paginationProps: {
+    currentPage: number;
+    totalPages: number;
+    itemsPerPage: number;
+    totalItems: number;
+    onPageChange: (page: number) => void;
+    onItemsPerPageChange: (size: number) => void;
+    itemsPerPageOptions: number[];
+  }) => React.ReactNode;
+  renderFilters?: (filterProps: {
+    filters: FilterConfig[];
+    filterValues: Record<string, any>;
+    onFilterChange: (key: string, value: any) => void;
+    onRefresh: () => void;
+    isLoading: boolean;
+  }) => React.ReactNode;
 }
 
 const DynamicCardList: React.FC<DynamicCardListProps> = ({
-  apiEndpoint,
   cardFields = [],
   filters = [],
   pagination = true,
   cardActions,
-  itemsPerPageOptions = [6, 12, 24],
+  itemsPerPageOptions = PAGINATION_CONFIG.pageSizeOptions,
   className = '',
   mockData,
   getCardClassName,
@@ -64,27 +92,44 @@ const DynamicCardList: React.FC<DynamicCardListProps> = ({
   newButtonLink,
   newButtonState,
   onNew,
-  additionalParams = {},
   isLoading = false,
+  onRefresh,
+  onPaginationChange,
+  serverPagination,
   data: staticData,
   emptyMessage = "No se encontraron registros",
   emptyIcon: EmptyIcon,
+  gridClassName,
+  renderPagination,
+  renderFilters
 }) => {
   // Determinar si estamos en modo datos estáticos
   const isStaticMode = staticData !== undefined;
   
   const [data, setData] = useState<any[]>(isStaticMode ? staticData : (mockData || []));
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filterValues, setFilterValues] = useState<{ [key: string]: string }>({});
+  // Estados locales para paginación (solo cuando no hay serverPagination)
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(itemsPerPageOptions[0]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const { addNotification } = useNotification();
+  const [totalRecords] = useState(0);
+  
+  // Determinar si hay paginación del servidor (no solo si existe serverPagination, sino si tiene valores válidos)
+  const hasServerPagination = serverPagination && 
+    serverPagination.pageNumber !== null && 
+    serverPagination.pageNumber > 0 && 
+    serverPagination.pageSize !== null && 
+    serverPagination.pageSize > 0;
+  
+  // Usar información del servidor si está disponible, sino usar estados locales
+  const effectiveCurrentPage = hasServerPagination ? serverPagination.pageNumber : currentPage;
+  // Para serverPagination, siempre usar el valor del servidor
+  const effectiveItemsPerPage = hasServerPagination ? serverPagination.pageSize : itemsPerPage;
+  const effectiveTotalRecords = serverPagination?.totalRecords || totalRecords;
 
   useEffect(() => {
     if (isStaticMode) {
-      setData(staticData);
+      setData(staticData || []);
       return;
     }
     
@@ -92,100 +137,84 @@ const DynamicCardList: React.FC<DynamicCardListProps> = ({
       setData(mockData);
       return;
     }
-    
-    if (apiEndpoint) {
-      fetchData();
-    }
     // eslint-disable-next-line
-  }, [apiEndpoint, mockData, staticData, search, filterValues, currentPage, itemsPerPage, additionalParams, isStaticMode]);
+  }, [mockData, isStaticMode]); // Removido staticData para evitar bucles
 
-  const fetchData = async () => {
-    if (!apiEndpoint) return;
-    
-    setLoading(true);
-    try {
-      const params: any = {};
-      params.pageNumber = currentPage;
-      params.pageSize = itemsPerPage;
-
-      // Agregar parámetros adicionales
-      Object.assign(params, additionalParams);
-
-      // Construir el parámetro Filter
-      const filterStrings: string[] = [];
-      Object.entries(filterValues).forEach(([key, value]) => {
-        if (value) filterStrings.push(`${key} = '${value}'`);
-      });
-      const filterParam = filterStrings.join(', ');
-      if (filterParam) {
-        params.Filter = 'AND ' + filterParam;
-      }
-
-      const res = await apiService.post(apiEndpoint, params);
-      const list = res?.data?.listFind;
-      const total =
-        res && 'totalRecords' in res && typeof res.totalRecords === 'number'
-          ? res.totalRecords
-          : Array.isArray(list)
-            ? list.length
-            : 0;
-
-      if (Array.isArray(list)) {
-        setData(list);
-        setTotalRecords(res && res.data && typeof res.data.totalRecords === 'number' ? res.data.totalRecords : 0);
-        if (total === 0) {
-          addNotification('No se encontraron registros', 'info');
-        }
-      } else if (res && res.message) {
-        const isSuccess = res.status >= 200 && res.status < 300;
-        addNotification(res.message, isSuccess ? 'success' : 'error');
-        setData([]);
-        setTotalRecords(0);
-      } else {
-        setData([]);
-        setTotalRecords(0);
-        addNotification('Respuesta vacía del servidor', 'error');
-      }
-    } catch (e: any) {
-      setData([]);
-      setTotalRecords(0);
-      const errorMessage = e?.response?.data?.message || e?.message || 'Error al cargar los datos';
-      addNotification(errorMessage, 'error');
+  // Efecto separado para manejar cambios en staticData sin bucles
+  useEffect(() => {
+    if (isStaticMode && staticData !== undefined) {
+      setData(staticData);
     }
-    setLoading(false);
-  };
+  }, [staticData, isStaticMode]);
+
+
 
   // Filtros locales (search y select)
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
+    const value = e.target.value;
+    setSearch(value);
     setCurrentPage(1);
+    
+    // Llamar al callback onChange si está disponible
+    const filter = filters?.find(f => f.key === 'search');
+    if (filter?.onChange) {
+      filter.onChange(value);
+    }
   };
   const handleSelect = (key: string, value: string) => {
     setFilterValues(prev => ({ ...prev, [key]: value }));
     setCurrentPage(1);
-  };
-
-  const handleItemsPerPageChange = (newItemsPerPage: number) => {
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1);
-  };
-
-  const handleRefresh = () => {
-    if (isStaticMode || mockData) {
-      // Para datos estáticos o mockData, solo resetear filtros y paginación
-      setSearch('');
-      setFilterValues({});
-      setCurrentPage(1);
-    } else if (apiEndpoint) {
-      // Para API calls, recargar datos
-      fetchData();
+    
+    // Llamar al callback onChange si está disponible
+    const filter = filters?.find(f => f.key === key);
+    if (filter?.onChange) {
+      filter.onChange(value);
     }
   };
 
-  // Filtrado local para datos estáticos y mockData
-  let filteredData = data;
-  if (isStaticMode || mockData) {
-    filteredData = data.filter(item => {
+  const handlePageChange = (newPage: number) => {
+    // Solo actualizar estado local si no hay serverPagination
+    if (!hasServerPagination) {
+      setCurrentPage(newPage);
+    }
+    
+    // Llamar a onPaginationChange si está disponible
+    if (onPaginationChange) {
+      onPaginationChange(newPage, effectiveItemsPerPage);
+    }
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    // Solo actualizar estado local si no hay serverPagination
+    if (!hasServerPagination) {
+      setItemsPerPage(newItemsPerPage);
+      setCurrentPage(1);
+    }
+    
+    // Llamar a onPaginationChange si está disponible (esto actualizará el servidor)
+    if (onPaginationChange) {
+      onPaginationChange(1, newItemsPerPage);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (onRefresh) {
+      // Si se proporciona onRefresh, usarlo con los valores efectivos de paginación
+      onRefresh(effectiveCurrentPage, effectiveItemsPerPage);
+    } else if (isStaticMode || mockData) {
+      // Para datos estáticos o mockData, solo resetear filtros y paginación
+      setSearch('');
+      setFilterValues({});
+      if (!hasServerPagination) {
+        setCurrentPage(1);
+      }
+    }
+  };
+
+  // Filtrado local solo para datos estáticos y mockData, NO para datos del servidor
+  let filteredData = Array.isArray(data) ? data : [];
+  if ((isStaticMode || mockData) && !hasServerPagination) {
+    filteredData = (Array.isArray(data) ? data : []).filter(item => {
       let matches = true;
       filters.forEach(f => {
         if (f.type === 'search' && search) {
@@ -201,19 +230,21 @@ const DynamicCardList: React.FC<DynamicCardListProps> = ({
   }
 
   let currentItems = data;
-  if (isStaticMode || mockData) {
-    // paginación local solo para datos estáticos y mockData
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  if ((isStaticMode || mockData) && !hasServerPagination) {
+    // paginación local solo para datos estáticos y mockData sin serverPagination
+    const indexOfLastItem = effectiveCurrentPage * effectiveItemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - effectiveItemsPerPage;
     currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+  } else {
+    // Para datos del servidor, usar los datos tal como vienen (ya filtrados por el servidor)
+    currentItems = Array.isArray(data) ? data : [];
   }
 
   // Paginación local
-  const totalRecordsLocal = (isStaticMode || mockData) ? filteredData.length : totalRecords;
-  const totalPages = Math.max(1, Math.ceil(totalRecordsLocal / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(effectiveTotalRecords / effectiveItemsPerPage));
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`w-full max-w-none space-y-6 ${className}`}>
       {/* Header reutilizable */}
       {title && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
@@ -242,38 +273,65 @@ const DynamicCardList: React.FC<DynamicCardListProps> = ({
         </div>
       )}
 
-      {/* Filtros - solo mostrar si no estamos en modo datos estáticos o si hay filtros definidos */}
+      {/* Filtros - personalizables */}
       {filters.length > 0 && (
-        <div className="bg-white/5 backdrop-blur-lg p-4 sm:p-6 rounded-2xl border border-white/10 shadow-lg">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 flex-1">
+        <>
+          {renderFilters ? (
+            renderFilters({
+              filters,
+              filterValues,
+              onFilterChange: handleSelect,
+              onRefresh: handleRefresh,
+              isLoading
+            })
+          ) : (
+            <div className="bg-white/5 backdrop-blur-lg p-4 sm:p-6 rounded-2xl border border-white/10 shadow-lg relative z-50">
+          <div className="flex flex-col sm:flex-row gap-2 items-center">
+            <div className="flex gap-2 flex-1 w-full">
               {filters.map((filter) => {
                 if (filter.type === 'search') {
                   return (
-                    <div key={filter.key} className="flex-1 relative">
+                    <div key={filter.key} className="w-2/3 relative z-50">
                       <input
                         type="text"
                         placeholder={filter.placeholder || 'Buscar...'}
                         value={search}
                         onChange={handleSearch}
-                        className="w-full pl-4 pr-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                        className="w-full pl-4 pr-4 py-2 bg-slate-700/80 border border-orange-500/30 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-orange-500 transition-colors text-sm"
                       />
                     </div>
                   );
                 }
                 if (filter.type === 'select') {
                   return (
-                    <div key={filter.key} className="flex items-center space-x-2">
-                      <select
+                    <div key={filter.key} className="w-1/3 relative z-50">
+                      <CustomSelect
+                        options={filter.options || []}
                         value={filterValues[filter.key] || ''}
-                        onChange={e => handleSelect(filter.key, e.target.value)}
-                        className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
-                      >
-                        <option value="">{filter.placeholder || 'Todos'}</option>
-                        {filter.options?.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
+                        onChange={(value) => handleSelect(filter.key, value)}
+                        placeholder={filter.placeholder || 'Todos'}
+                        className="w-full"
+                      />
+                    </div>
+                  );
+                }
+                if (filter.type === 'category-picker') {
+                  return (
+                    <div key={filter.key} className="flex items-center space-x-2 relative z-50">
+                      <CategoryPicker
+                        categories={filter.categories || []}
+                        selectedCategoryId={filterValues[filter.key] ? parseInt(filterValues[filter.key]) : undefined}
+                        onCategorySelect={(category) => {
+                          const value = category ? category.id.toString() : '';
+                          handleSelect(filter.key, value);
+                        }}
+                        placeholder={filter.placeholder || 'Todas las categorías'}
+                        loading={filter.loading || false}
+                        className="min-w-[180px]"
+                        variant="compact"
+                        showAllOption={true}
+                        allOptionText="Todas las categorías"
+                      />
                     </div>
                   );
                 }
@@ -284,34 +342,48 @@ const DynamicCardList: React.FC<DynamicCardListProps> = ({
             {/* Botón de recarga */}
             <button
               onClick={handleRefresh}
-              disabled={loading || isLoading}
+              disabled={isLoading}
               className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
               title="Recargar datos"
             >
-              <RefreshCw className={`h-4 w-4 ${loading || isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
+          )}
+        </>
       )}
 
       {/* Cards */}
-      <div className={`grid gap-4 sm:gap-6 ${isStaticMode ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
-        {loading || isLoading ? (
-          <div className="col-span-full text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
-            <p className="mt-2 text-white/60">Cargando...</p>
+      <div className={`w-full grid gap-4 sm:gap-6 mb-8 ${gridClassName || (isStaticMode ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-1 lg:grid-cols-2')}`} style={{ minWidth: '100%' }}>
+        {isLoading ? (
+          <div className="col-span-full w-full">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 shadow-lg overflow-hidden relative w-full min-h-[120px]">
+              <div className="flex items-center justify-center p-6 space-x-6 min-h-[120px]">
+                <div className="flex flex-col items-center justify-center text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                  <p className="mt-2 text-white/60">Cargando...</p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : currentItems.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            {EmptyIcon ? (
-              <EmptyIcon className="text-white/60 text-6xl mb-4 mx-auto" />
-            ) : (
-              <div className="text-white/60 text-6xl mb-4">📋</div>
-            )}
-            <h3 className="text-lg font-medium text-white">{emptyMessage}</h3>
-            <p className="text-white/60 mt-1">
-              {search || Object.values(filterValues).some(v => v) ? 'Intenta con otros filtros' : 'Comienza agregando un nuevo registro'}
-            </p>
+          <div className="col-span-full w-full">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 shadow-lg overflow-hidden relative w-full min-h-[120px]">
+              <div className="flex items-center justify-center p-6 space-x-6 min-h-[120px]">
+                <div className="flex flex-col items-center justify-center text-center">
+                  {EmptyIcon ? (
+                    <EmptyIcon className="text-white/60 text-4xl mb-4" />
+                  ) : (
+                    <div className="text-white/60 text-4xl mb-4">📋</div>
+                  )}
+                  <h3 className="text-lg font-medium text-white">{emptyMessage}</h3>
+                  <p className="text-white/60 mt-1 text-sm">
+                    {search || Object.values(filterValues).some(v => v) ? 'Intenta con otros filtros' : 'Comienza agregando un nuevo registro'}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           currentItems.map((item, idx) => (
@@ -334,23 +406,41 @@ const DynamicCardList: React.FC<DynamicCardListProps> = ({
         )}
       </div>
 
-      {/* Paginación */}
+      {/* Paginación personalizable */}
       {pagination && currentItems.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          itemsPerPage={itemsPerPage}
-          onItemsPerPageChange={handleItemsPerPageChange}
-        />
-      )}
+        <>
+          {renderPagination ? (
+            renderPagination({
+              currentPage: effectiveCurrentPage,
+              totalPages,
+              itemsPerPage: effectiveItemsPerPage,
+              totalItems: effectiveTotalRecords,
+              onPageChange: handlePageChange,
+              onItemsPerPageChange: handleItemsPerPageChange,
+              itemsPerPageOptions: itemsPerPageOptions as number[]
+            })
+          ) : (
+            <>
+              <div className="mt-6 relative z-20">
+                <Pagination
+                  currentPage={effectiveCurrentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  itemsPerPage={effectiveItemsPerPage}
+                  onItemsPerPageChange={handleItemsPerPageChange}
+                />
+              </div>
 
-      {/* Info de paginación */}
-      {pagination && totalRecordsLocal > 0 && (
-        <div className="flex justify-center sm:justify-end text-xs sm:text-sm text-white/60 text-center sm:text-left">
-          <span className="hidden sm:inline">Mostrando página {currentPage} de {totalPages} | Total de registros: {totalRecordsLocal}</span>
-          <span className="sm:hidden">Página {currentPage} de {totalPages} | {totalRecordsLocal} registros</span>
-        </div>
+              {/* Info de paginación */}
+              {effectiveTotalRecords > 0 && (
+                <div className="flex justify-center sm:justify-end text-xs sm:text-sm text-white/60 text-center sm:text-left">
+                  <span className="hidden sm:inline">Mostrando página {effectiveCurrentPage} de {totalPages} | Total de registros: {effectiveTotalRecords}</span>
+                  <span className="sm:hidden">Página {effectiveCurrentPage} de {totalPages} | {effectiveTotalRecords} registros</span>
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
     </div>
   );

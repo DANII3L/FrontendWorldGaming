@@ -118,6 +118,23 @@ const StandingsTable: React.FC<StandingsTableProps> = ({
       )}
 
       <div className={`${isEmbedded ? 'p-4 h-full' : 'p-6 overflow-y-auto max-h-[calc(95vh-120px)]'}`}>
+        {/* Mensaje informativo */}
+        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <Trophy className="h-4 w-4 text-blue-400" />
+            <span className="text-sm font-medium text-blue-400">Tabla de Calificaciones - {tournamentName}</span>
+          </div>
+          <p className="text-sm text-white/80">
+            Estás viendo la clasificación actual del torneo con {participants.length} participantes. 
+            La tabla muestra puntos, partidos jugados, victorias perfectas, victorias, empates, derrotas, 
+            diferencia de mapas y diferencia de rondas. Los equipos están ordenados por puntos totales.
+          </p>
+          <div className="mt-3 flex items-center gap-2 text-xs text-blue-400/80">
+            <span>ℹ️</span>
+            <span>Haz clic en cualquier equipo para ver estadísticas detalladas</span>
+          </div>
+        </div>
+
         {/* Header estilo Rainbow Six */}
         <div className="mb-6">
           {/* Título principal */}

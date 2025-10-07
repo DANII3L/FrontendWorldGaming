@@ -1,5 +1,5 @@
 import React from "react";
-import { useColorPalette } from "../../shared/contexts/ColorPaletteContext";
+import { useColorPalette } from "../../shared/contexts";
 
 const CommunitySection: React.FC = () => {
     const { currentPalette } = useColorPalette();
@@ -8,9 +8,6 @@ const CommunitySection: React.FC = () => {
         <section
             id="comunidad"
             className="py-24 relative overflow-hidden"
-            style={{
-                background: `linear-gradient(135deg, ${currentPalette.secondary}40 0%, ${currentPalette.tertiary}40 50%, ${currentPalette.accent}40 100%)`
-            }}
         >
             {/* Efectos de fondo */}
             <div className="absolute inset-0">

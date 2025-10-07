@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { CustomSelect } from '../../shared/components/ui';
 import {
   Edit,
   Trash2,
@@ -396,13 +397,19 @@ const GestionarEquipos: React.FC = () => {
                        />
                      </div>
                      <div className="flex items-center space-x-2">
-                       <select className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200">
-                         <option value="">Todos los juegos</option>
-                         <option value="lol">League of Legends</option>
-                         <option value="valorant">Valorant</option>
-                         <option value="csgo">CS:GO</option>
-                         <option value="dota">Dota 2</option>
-                       </select>
+                       <CustomSelect
+                         options={[
+                           { value: '', label: 'Todos los juegos' },
+                           { value: 'lol', label: 'League of Legends' },
+                           { value: 'valorant', label: 'Valorant' },
+                           { value: 'csgo', label: 'CS:GO' },
+                           { value: 'dota', label: 'Dota 2' }
+                         ]}
+                         value=""
+                         onChange={() => {}}
+                         placeholder="Todos los juegos"
+                         className="min-w-[150px]"
+                       />
                      </div>
                    </div>
                  </div>
@@ -656,17 +663,16 @@ const GestionarEquipos: React.FC = () => {
                     {/* Selector de Juego */}
                     <div className="flex items-center space-x-3">
                       <label className="text-white/60 text-sm font-medium">Juego seleccionado:</label>
-                      <select
+                      <CustomSelect
+                        options={selectedTeam.gameRequirements.map((game) => ({
+                          value: game.gameId,
+                          label: game.gameName
+                        }))}
                         value={selectedGame}
-                        onChange={(e) => setSelectedGame(e.target.value)}
-                        className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        {selectedTeam.gameRequirements.map((game) => (
-                          <option key={game.gameId} value={game.gameId} className="bg-gray-800 text-white">
-                            {game.gameName}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => setSelectedGame(value)}
+                        placeholder="Seleccionar juego..."
+                        className="min-w-[150px]"
+                      />
                     </div>
                   </div>
 

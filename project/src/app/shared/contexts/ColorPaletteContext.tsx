@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { getGamePalette } from '../services/paletteService';
+import { getGamePalette } from '../../juegos/service/paletasService';
 
 // Interfaz para la paleta de colores
-interface ColorPalette {
+export interface ColorPalette {
   primary: string;      // Color más oscuro (0A1128)
   secondary: string;    // Azul profundo (001F54)
   tertiary: string;     // Azul medio (034078)
@@ -47,7 +47,6 @@ export const ColorPaletteProvider: React.FC<ColorPaletteProviderProps> = ({ chil
       applyPaletteToCSS(response.palette);
       
     } catch (error) {
-      console.error('Error loading game palette:', error);
       setCurrentPalette(defaultPalette);
     } finally {
       setIsLoading(false);

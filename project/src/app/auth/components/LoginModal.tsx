@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { useNotification } from '../../shared/components/ui/UnifiedNotificationSystem';
 import DynamicForm from '../../shared/components/ui/DynamicForm';
+import LoadingScreen from '../../shared/components/ui/LoadingScreen';
 import { FormField } from '../../shared/components/ui/DynamicForm';
 
 interface LoginModalProps {
@@ -56,6 +57,41 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
   };
 
   if (!isOpen) return null;
+
+  // Mostrar loading al iniciar sesión
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-gray-900/95 backdrop-blur-lg rounded-2xl border border-white/10 shadow-2xl w-full max-w-2xl">
+          <LoadingScreen
+            title="Iniciando Sesión"
+            subtitle="Validando tus credenciales..."
+            description="Estamos verificando tu cuenta en WorldGaming. Esto puede tomar unos momentos."
+            showDetails={true}
+            details={{
+              title: "Información del login",
+              items: [
+                {
+                  label: 'Estado',
+                  value: 'Validando...'
+                },
+                {
+                  label: 'Autenticación',
+                  value: 'En progreso'
+                },
+                {
+                  label: 'Siguiente paso',
+                  value: 'Redirigir al dashboard'
+                }
+              ]
+            }}
+            variant="detailed"
+            className="bg-transparent min-h-0"
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">

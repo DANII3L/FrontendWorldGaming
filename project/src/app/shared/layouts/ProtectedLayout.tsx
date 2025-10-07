@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useColorPalette } from '../contexts/ColorPaletteContext';
 import HeaderSection from '../../landing/components/HeaderSection';
@@ -6,11 +6,29 @@ import GameSelector from '../../landing/components/GameSelector';
 import GamingHub from '../../landing/components/GamingHub';
 import { Zap, Gamepad2 } from 'lucide-react';
 
+// Interfaz para la paleta de colores
+interface ColorPalette {
+  primary: string;
+  secondary: string;
+  tertiary: string;
+  accent: string;
+  light: string;
+}
+
 const ProtectedLayout: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isGamingHubOpen, setIsGamingHubOpen] = useState(false);
     const [isGameSelectorOpen, setIsGameSelectorOpen] = useState(false);
+    const [gamePalette, setGamePalette] = useState<ColorPalette | null>(null);
     const { currentPalette } = useColorPalette();
+
+    // Función para actualizar la paleta desde el GameSelector
+    const handlePaletteUpdate = useCallback((palette: ColorPalette) => {
+        setGamePalette(palette);
+    }, []);
+
+    // Usar la paleta del juego si está disponible, sino usar la del contexto
+    const activePalette = gamePalette || currentPalette;
 
     const scrollToSection = (sectionId: string) => {
         const element = document.getElementById(sectionId);
@@ -20,21 +38,11 @@ const ProtectedLayout: React.FC = () => {
         setIsMenuOpen(false);
     };
 
-    const handleOpenLoginModal = () => {
-        // En el layout protegido, no necesitamos abrir modales de login
-        console.log('Usuario ya autenticado');
-    };
-
-    const handleOpenRegisterModal = () => {
-        // En el layout protegido, no necesitamos abrir modales de registro
-        console.log('Usuario ya autenticado');
-    };
-
     return (
         <div
             className="min-h-screen"
             style={{
-                background: `linear-gradient(135deg, ${currentPalette.primary} 0%, ${currentPalette.secondary} 50%, ${currentPalette.tertiary} 100%)`
+                background: `linear-gradient(135deg, ${activePalette.primary} 0%, ${activePalette.secondary} 50%, ${activePalette.tertiary} 100%)`
             }}
         >
             {/* Header */}
@@ -42,8 +50,8 @@ const ProtectedLayout: React.FC = () => {
                 scrollToSection={scrollToSection}
                 isMenuOpen={isMenuOpen}
                 setIsMenuOpen={setIsMenuOpen}
-                onOpenLoginModal={handleOpenLoginModal}
-                onOpenRegisterModal={handleOpenRegisterModal}
+                onOpenLoginModal={() => {}}
+                onOpenRegisterModal={() => {}}
             />
 
             {/* Contenido principal */}
@@ -139,7 +147,7 @@ const ProtectedLayout: React.FC = () => {
                         : 'opacity-0 pointer-events-none transform translate-x-4'
                 }`}
             >
-                <GameSelector />
+                <GameSelector onPaletteUpdate={handlePaletteUpdate} />
             </div>
         </div>
     );

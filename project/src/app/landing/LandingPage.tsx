@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import StatsSection from './components/StatsSection';
 import FeaturedTournament from './components/FeaturedTournament';
 import GameSelector from './components/GameSelector';
 import GamingHub from './components/GamingHub';
-import { useColorPalette } from '../shared/contexts/ColorPaletteContext';
+import { useColorPalette } from '../shared/contexts';
 import HeaderSection from './components/HeaderSection';
 import HeroSection from './components/HeroSection';
 import TournamentsSection from './components/TournamentsSection';
@@ -14,13 +14,31 @@ import LoginModal from '../auth/components/LoginModal';
 import RegisterModal from '../auth/components/RegisterModal';
 import { Zap, Gamepad2 } from 'lucide-react';
 
+// Interfaz para la paleta de colores
+interface ColorPalette {
+  primary: string;
+  secondary: string;
+  tertiary: string;
+  accent: string;
+  light: string;
+}
+
 const LandingPage: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isGamingHubOpen, setIsGamingHubOpen] = useState(false);
   const [isGameSelectorOpen, setIsGameSelectorOpen] = useState(false);
+  const [gamePalette, setGamePalette] = useState<ColorPalette | null>(null);
   const { currentPalette } = useColorPalette();
+
+  // Función para actualizar la paleta desde el GameSelector
+  const handlePaletteUpdate = useCallback((palette: ColorPalette) => {
+    setGamePalette(palette);
+  }, []);
+
+  // Usar la paleta del juego si está disponible, sino usar la del contexto
+  const activePalette = gamePalette || currentPalette;
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -60,7 +78,7 @@ const LandingPage: React.FC = () => {
     <div
       className="min-h-screen"
       style={{
-        background: `linear-gradient(135deg, ${currentPalette.primary} 0%, ${currentPalette.secondary} 50%, ${currentPalette.tertiary} 100%)`
+        background: `linear-gradient(135deg, ${activePalette.primary} 0%, ${activePalette.secondary} 50%, ${activePalette.tertiary} 100%)`
       }}
     >
       {/* Header */}
@@ -174,7 +192,7 @@ const LandingPage: React.FC = () => {
             : 'opacity-0 pointer-events-none transform translate-x-4'
         }`}
       >
-        <GameSelector />
+        <GameSelector onPaletteUpdate={handlePaletteUpdate} />
       </div>
 
       <LoginModal

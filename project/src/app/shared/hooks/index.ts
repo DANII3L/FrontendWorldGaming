@@ -1,11 +1,32 @@
 /**
  * Exportaciones centralizadas de hooks personalizados
- * Facilita la importación de hooks reutilizables
+ * Actualizado después de la optimización
  */
 
-// Hooks de utilidad
-export * from './useDebounce';
-export * from './usePagination';
-export * from './usePaginationDefaults';
-export * from './useDynamicSearch';
+import React from 'react';
+
+// Hooks de utilidad optimizados
 export * from './useEntityManagement';
+export * from './usePaginationDefaults';
+export * from './useSearchStable';
+export * from './useSearch';
+
+// Hooks de API usando React Query
+export * from './useApi';
+
+// Hook de debounce temporal hasta instalar use-debounce
+export const useDebounce = <T>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = React.useState<T>(value);
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};

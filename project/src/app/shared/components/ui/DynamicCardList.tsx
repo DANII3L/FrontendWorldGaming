@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import { Card } from './Card';
 import Pagination from '../Pagination';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -76,7 +76,7 @@ interface DynamicCardListProps {
   }) => React.ReactNode;
 }
 
-const DynamicCardList: React.FC<DynamicCardListProps> = ({
+const DynamicCardList: React.FC<DynamicCardListProps> = memo(({
   cardFields = [],
   filters = [],
   pagination = true,
@@ -320,7 +320,7 @@ const DynamicCardList: React.FC<DynamicCardListProps> = ({
                     <div key={filter.key} className="flex items-center space-x-2 relative z-50">
                       <CategoryPicker
                         categories={filter.categories || []}
-                        selectedCategoryId={filterValues[filter.key] ? parseInt(filterValues[filter.key]) : undefined}
+                        {...(filterValues[filter.key] && { selectedCategoryId: parseInt(filterValues[filter.key] as string) })}
                         onCategorySelect={(category) => {
                           const value = category ? category.id.toString() : '';
                           handleSelect(filter.key, value);
@@ -444,6 +444,8 @@ const DynamicCardList: React.FC<DynamicCardListProps> = ({
       )}
     </div>
   );
-};
+});
+
+DynamicCardList.displayName = 'DynamicCardList';
 
 export default DynamicCardList; 

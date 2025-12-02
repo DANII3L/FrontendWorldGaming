@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eliminarCategoria, buscarCategorias, obtenerCategorias, Categoria } from '../service/categoriasService';
-import { DynamicSearchParams } from '../../shared/services/dynamicService';
+import { DynamicSearchParams } from '../../shared/types';
 import { useConfirmation, useNotification } from '../../shared/contexts';
 import { useDebounce, usePaginationDefaults } from '../../shared/hooks';
 
@@ -27,9 +27,14 @@ export const useCategories = () => {
   const navigate = useNavigate();
 
   // Hook de debounce para búsquedas de texto
-  const debouncedSearch = useDebounce((filters: DynamicSearchParams, pageNumber?: number, pageSize?: number) => {
-    searchCategories(filters, pageNumber, pageSize);
-  }, 300);
+  const [debouncedFilters, setDebouncedFilters] = useState<DynamicSearchParams>({});
+  const [debouncedPageNumber, setDebouncedPageNumber] = useState<number | undefined>(undefined);
+  const [debouncedPageSize, setDebouncedPageSize] = useState<number | undefined>(undefined);
+  
+  // Aplicar debounce a los filtros
+  const debouncedSearchFilters = useDebounce(debouncedFilters, 300);
+  const debouncedPageNum = useDebounce(debouncedPageNumber, 300);
+  const debouncedPageSz = useDebounce(debouncedPageSize, 300);
 
   // Función para cargar categorías desde la API
   const loadCategories = async (pageNumber?: number, pageSize?: number) => {
@@ -129,7 +134,9 @@ export const useCategories = () => {
     }
     
     setSearchFilters(newFilters);
-    debouncedSearch(newFilters, paginationInfo.pageNumber, paginationInfo.pageSize);
+    setDebouncedFilters(newFilters);
+    setDebouncedPageNumber(paginationInfo.pageNumber);
+    setDebouncedPageSize(paginationInfo.pageSize);
   };
 
   // Función para manejar cambio de filtros
@@ -193,6 +200,13 @@ export const useCategories = () => {
       ...categories.map(cat => ({ value: cat.id.toString(), label: cat.nombre }))
     ];
   };
+
+  // Efecto para manejar búsquedas con debounce
+  useEffect(() => {
+    if (Object.keys(debouncedSearchFilters).length > 0) {
+      searchCategories(debouncedSearchFilters, debouncedPageNum, debouncedPageSz);
+    }
+  }, [debouncedSearchFilters, debouncedPageNum, debouncedPageSz]);
 
   // Cargar categorías al montar el componente
   useEffect(() => {

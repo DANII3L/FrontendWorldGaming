@@ -22,6 +22,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithOAuth: (token: string, userData: User) => void;
   logout: () => void;
   register: (data: any) => Promise<any>;
   isAuthenticated: boolean;
@@ -109,6 +110,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithOAuth = (token: string, userData: User) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('token', token);
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
@@ -129,6 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider value={{
       user,
       login,
+      loginWithOAuth,
       logout,
       register,
       isAuthenticated: !!user,

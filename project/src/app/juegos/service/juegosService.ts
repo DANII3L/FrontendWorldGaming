@@ -1,5 +1,5 @@
 import { apiService } from '../../shared/services/apiService';
-import { dynamicService, DynamicSearchParams } from '../../shared/services/dynamicService';
+import { DynamicSearchParams } from '../../shared/types';
 
 // Interfaces para tipado
 export interface PaletasJuego {
@@ -49,7 +49,31 @@ const eliminarJuego = async (id: number): Promise<any> => {
 
 // Función para buscar juegos con filtros dinámicos
 const buscarJuegos = async (filters: DynamicSearchParams, pageNumber?: number, pageSize?: number) => {
-  return await dynamicService.searchGames(filters, pageNumber, pageSize);
+  try {
+    // Construir parámetros de consulta
+    const params: any = {
+      ...filters,
+      pageNumber: pageNumber || 1,
+      pageSize: pageSize || 10
+    };
+
+    // Remover parámetros vacíos
+    Object.keys(params).forEach(key => {
+      if (params[key] === undefined || params[key] === null || params[key] === '') {
+        delete params[key];
+      }
+    });
+
+    const response = await apiService.get('Juegos', params);
+    return response;
+  } catch (error) {
+    console.error('Error al buscar juegos:', error);
+    return {
+      success: false,
+      message: 'Error al buscar juegos',
+      data: { listFind: [], totalRecords: 0, pageNumber: 1, pageSize: 10 }
+    };
+  }
 };
 
 export { 

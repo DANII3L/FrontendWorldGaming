@@ -1,7 +1,7 @@
 import React from 'react';
 import { GitBranch, TrendingUp, Users, Calendar, Info } from 'lucide-react';
 import { MiTorneo } from '../hooks/useMisTorneos';
-import { getDifficultyBadgeDark, getDifficultyText } from '../../shared/utils/difficultyUtils';
+import { getDifficultyColor } from '../../shared/utils';
 
 // Funciones de utilidad para colores y textos
 const getStatusColor = (status: string) => {
@@ -64,8 +64,8 @@ const MyTournamentCard: React.FC<MyTournamentCardProps> = ({
             <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(tournament.estado || 'próximo')}`}>
               {getStatusText(tournament.estado || 'próximo')}
             </span>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getDifficultyBadgeDark(tournament.dificultad || 'intermedio').bgColor} ${getDifficultyBadgeDark(tournament.dificultad || 'intermedio').textColor} ${getDifficultyBadgeDark(tournament.dificultad || 'intermedio').borderColor}`}>
-              {getDifficultyText(tournament.dificultad || 'intermedio')}
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getDifficultyColor(tournament.dificultad || 'intermedio')}`}>
+              {(tournament.dificultad || 'intermedio').toUpperCase()}
             </span>
           </div>
           {tournament.phase && (

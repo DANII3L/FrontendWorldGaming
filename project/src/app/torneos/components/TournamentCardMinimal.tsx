@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { Users, Trophy, ArrowRight, GitBranch, TrendingUp, Edit, Calendar } from 'lucide-react';
 import { Torneo } from '../hooks/useTorneos';
 import TournamentToggle from './TournamentToggle';
-import { getDifficultyBadgeDark, getDifficultyText } from '../../shared/utils/difficultyUtils';
+import { getDifficultyColor } from '../../shared/utils';
 
 interface TournamentCardMinimalProps {
   tournament: Torneo;
@@ -14,7 +14,7 @@ interface TournamentCardMinimalProps {
   showStatusChip?: boolean; // Nueva prop para controlar si se muestra el chip de estado
 }
 
-const TournamentCardMinimal: React.FC<TournamentCardMinimalProps> = ({
+const TournamentCardMinimal: React.FC<TournamentCardMinimalProps> = memo(({
   tournament,
   onTournamentClick,
   onBracketClick,
@@ -25,10 +25,14 @@ const TournamentCardMinimal: React.FC<TournamentCardMinimalProps> = ({
 }) => {
   const availableSpots = (tournament.maxParticipantes || 120) - (tournament.participantes || 0);
   
+  const handleClick = useCallback(() => {
+    onTournamentClick(tournament);
+  }, [tournament, onTournamentClick]);
+  
   return (
     <div 
       className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 shadow-lg overflow-hidden hover:scale-[1.02] transition-all duration-300 group cursor-pointer hover:border-white/20 relative w-full"
-      onClick={() => onTournamentClick(tournament)}
+      onClick={handleClick}
     >
       {/* Contenido de la card */}
       <div className="flex items-center p-6 space-x-6">
@@ -55,8 +59,8 @@ const TournamentCardMinimal: React.FC<TournamentCardMinimalProps> = ({
           {/* Chips de dificultad y estado */}
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             {/* Chip de dificultad - siempre visible */}
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getDifficultyBadgeDark(tournament.dificultad).bgColor} ${getDifficultyBadgeDark(tournament.dificultad).textColor} ${getDifficultyBadgeDark(tournament.dificultad).borderColor}`}>
-              {getDifficultyText(tournament.dificultad)}
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getDifficultyColor(tournament.dificultad)}`}>
+              {tournament.dificultad?.toUpperCase() || 'N/A'}
             </span>
             
             {/* Chip de estado del torneo (Próximo, En juego, Terminado) */}
@@ -195,6 +199,8 @@ const TournamentCardMinimal: React.FC<TournamentCardMinimalProps> = ({
       </div>
     </div>
   );
-};
+}); 
+
+TournamentCardMinimal.displayName = 'TournamentCardMinimal';
 
 export default TournamentCardMinimal;

@@ -41,7 +41,7 @@ class NotificationService {
    * Mostrar notificación
    */
   notify(type: NotificationType, message: string, title?: string) {
-    const event: NotificationEvent = { type, message, title };
+    const event: NotificationEvent = { type, message, title: title || '' };
     this.listeners.forEach(listener => listener(event));
   }
 

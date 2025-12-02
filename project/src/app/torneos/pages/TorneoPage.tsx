@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { GitBranch, TrendingUp, Trophy, Users, X, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DynamicCardList from '../../shared/components/ui/DynamicCardList';
@@ -59,7 +59,7 @@ const TorneosPage: React.FC = () => {
   } = useJuegos();
 
   const [activeMainTab, setActiveMainTab] = useState<'todos' | 'mis' | 'participando'>('todos');
-  const [sharedPageSize, setSharedPageSize] = useState<number>(6); // Estado compartido para pageSize
+  const [sharedPageSize, setSharedPageSize] = useState<number>(8); // Estado compartido para pageSize
   const [showBracketModal, setShowBracketModal] = useState(false);
   const [selectedTournamentForBracket, setSelectedTournamentForBracket] = useState<Torneo | MiTorneo | null>(null);
   const [showChartModal, setShowChartModal] = useState(false);
@@ -72,17 +72,17 @@ const TorneosPage: React.FC = () => {
 
   // Estados de paginación (ahora manejados por los hooks)
 
-  const handleTeamClick = (participant: any) => {
+  const handleTeamClick = useCallback((participant: any) => {
     setShowSidebar(true);
     setSelectedTeamForSidebar(participant.name);
-  };
+  }, []);
 
-  const handleCloseSidebar = () => {
+  const handleCloseSidebar = useCallback(() => {
     setShowSidebar(false);
     setSelectedTeamForSidebar('');
-  };
+  }, []);
 
-  const handleJoinTournament = async (_tournament: Torneo | MiTorneo) => {
+  const handleJoinTournament = useCallback(async (_tournament: Torneo | MiTorneo) => {
     try {
       setShowInfoModal(false);
       // TODO: Implementar llamada a la API para unirse al torneo
@@ -90,32 +90,32 @@ const TorneosPage: React.FC = () => {
     } catch (error) {
       console.error('Error al unirse al torneo:', error);
     }
-  };
+  }, []);
 
-  const handleEditTournament = (tournament: Torneo) => {
+  const handleEditTournament = useCallback((tournament: Torneo) => {
     navigate(`/worldGaming/torneos/editar/${tournament.id}`);
-  };
+  }, [navigate]);
 
-  const handleTournamentClick = (tournament: Torneo | MiTorneo) => {
+  const handleTournamentClick = useCallback((tournament: Torneo | MiTorneo) => {
     setSelectedTournamentForInfo(tournament);
     setShowInfoModal(true);
-  };
+  }, []);
 
-  const getFilteredParticipatingTorneos = () => {
-    return misTorneos.filter(torneo => 
+  const getFilteredParticipatingTorneos = useMemo(() => {
+    return misTorneos.filter(torneo =>
       torneo.estado?.toLowerCase() === 'activo' || torneo.estado?.toLowerCase() === 'en curso'
     );
-  };
+  }, [misTorneos]);
 
   // Función para manejar cambio de pageSize compartido
-  const handleSharedPageSizeChange = (newPageSize: number) => {
+  const handleSharedPageSizeChange = useCallback((newPageSize: number) => {
     setSharedPageSize(newPageSize);
     // Actualizar todos los hooks con el nuevo pageSize
     handlePageSizeChangeTorneos(newPageSize);
     handleItemsPerPageChangeMis(newPageSize);
-  };
+  }, [handlePageSizeChangeTorneos, handleItemsPerPageChangeMis]);
 
-  const filterOptions = getFilterOptions();
+  const filterOptions = useMemo(() => getFilterOptions(), [getFilterOptions]);
 
   if (loading && torneos.length === 0) {
     return (
@@ -152,15 +152,17 @@ const TorneosPage: React.FC = () => {
       {!loadingHighlights && highlights.length > 0 && (
         <div className="mb-8">
           <HighlightCarousel
-            items={highlights.map(highlight => ({
-              id: highlight.id,
-              title: highlight.title,
-              description: highlight.description,
-              image: highlight.image,
-              link: highlight.link,
-              type: highlight.type,
-              duration: highlight.duration
-            }))}
+            items={highlights
+              .filter(highlight => highlight.title && highlight.image)
+              .map(highlight => ({
+                id: highlight.id,
+                title: highlight.title,
+                description: highlight.description || '',
+                image: highlight.image,
+                link: highlight.link || '',
+                type: highlight.type,
+                duration: highlight.duration || 0
+              }))}
             autoPlay={true}
             autoPlayInterval={6000}
             showControls={true}
@@ -195,12 +197,10 @@ const TorneosPage: React.FC = () => {
         </div>
       )}
 
-
-
       {/* Header con título y descripción */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-            <div>
+          <div>
             <h1 className="text-xl font-bold text-white">
               {activeMainTab === 'todos' ? 'Todos los torneos' :
                 activeMainTab === 'mis' ? 'Mis torneos' : 'Torneos en los que participas'}
@@ -212,8 +212,8 @@ const TorneosPage: React.FC = () => {
                   ? 'Torneos en los que participas o has participado'
                   : 'Torneos en los que estás actualmente participando'
               }
-              </p>
-            </div>
+            </p>
+          </div>
           {activeMainTab === 'mis' && (
             <button
               onClick={() => navigate('/worldGaming/torneos/crear')}
@@ -222,8 +222,8 @@ const TorneosPage: React.FC = () => {
               <span>Crear Torneo</span>
             </button>
           )}
-          </div>
         </div>
+      </div>
 
       {/* Tabs de contenido */}
       <div className="mb-8">
@@ -262,7 +262,7 @@ const TorneosPage: React.FC = () => {
             <div className="flex items-center justify-center gap-2">
               <Users className="w-4 h-4" />
               <span>Participando</span>
-          </div>
+            </div>
           </button>
         </div>
       </div>
@@ -317,11 +317,11 @@ const TorneosPage: React.FC = () => {
             gridClassName="grid-cols-1 lg:grid-cols-2 gap-6"
             renderFilters={TournamentFilters}
             renderPagination={TournamentPagination}
-        serverPagination={{
+            serverPagination={{
               totalRecords: totalItems,
-          pageNumber: pageNumber,
-          pageSize: sharedPageSize
-        }}
+              pageNumber: pageNumber,
+              pageSize: sharedPageSize
+            }}
             onPaginationChange={(page, size) => {
               if (size && size !== sharedPageSize) {
                 // Si cambió el tamaño de página, usar función compartida
@@ -425,11 +425,11 @@ const TorneosPage: React.FC = () => {
             }}
             onRefresh={refreshMisTorneos}
           />
-          
+
           {/* Cards de Estadísticas al final */}
-          <TournamentStatsCards 
-            torneos={misTorneos} 
-            title="Estadísticas de Mis Torneos" 
+          <TournamentStatsCards
+            torneos={misTorneos}
+            title="Estadísticas de Mis Torneos"
           />
         </div>
       ) : (
@@ -512,7 +512,7 @@ const TorneosPage: React.FC = () => {
 
           {/* Cards de Estadísticas al final */}
           <TournamentStatsCards
-            torneos={getFilteredParticipatingTorneos()}
+            torneos={getFilteredParticipatingTorneos}
             title="Estadísticas de Torneos Participando"
           />
         </div>

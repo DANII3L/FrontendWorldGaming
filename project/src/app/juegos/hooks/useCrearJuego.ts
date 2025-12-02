@@ -7,7 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { GAME_ICONS } from '../constants';
 import { GameForm } from '../types/GameForm';
 import { GameMapper } from '../mappers';
-import { emojiToUnicode } from '../../shared/utils/iconUtils';
+import { emojiToUnicode } from '../../shared/utils';
 
 export const useCrearJuego = () => {
   // Hook de notificaciones global

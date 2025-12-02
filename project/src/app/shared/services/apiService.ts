@@ -26,81 +26,90 @@ const isConnectionTimeoutError = (message: string): boolean => {
 
 // Función para manejar errores de timeout
 const handleConnectionTimeout = () => {
-  // Usar la función de logout global que actualiza el contexto de React
+  console.log('Timeout de conexión detectado, cerrando sesión...');
   performGlobalLogout();
   
-  // Mostrar notificación de sesión expirada
-  notificationService.error(
-    'Tu sesión ha expirado debido a un timeout de conexión. Serás redirigido al inicio.',
-    'Sesión Expirada'
-  );
-
-  // Redirigir después de un breve delay para que se muestre la notificación
   setTimeout(() => {
     navigationService.navigateToHome();
   }, 1000);
 };
 
-// Función para manejar errores de autorización (401)
 const handleUnauthorized = () => {
-  // Usar la función de logout global que actualiza el contexto de React
+  console.log('Usuario no autorizado, cerrando sesión...');
   performGlobalLogout();
   
-  // Mostrar notificación de sesión expirada
-  notificationService.error(
-    'Tu sesión ha expirado o no tienes permisos para acceder a este recurso. Serás redirigido al inicio.',
-    'Sesión Expirada'
-  );
-
-  // Redirigir después de un breve delay para que se muestre la notificación
   setTimeout(() => {
     navigationService.navigateToHome();
   }, 1000);
 };
 
+// Configuración optimizada de Axios
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 10000, // 10 segundos de timeout
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
+// Interceptor de request optimizado
 api.interceptors.request.use(
   (config) => {
     // Adjuntar token de autenticación
     const token = localStorage.getItem('token');
-    if (token) {
-      if (!config.headers) config.headers = {};
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token && config.headers) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
+    
+    // Log de requests en desarrollo
+    if (import.meta.env.MODE === 'development') {
+      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    }
+    
     return config;
   },
   (error) => {
+    console.error('❌ Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Interceptor de respuesta para manejar errores de timeout y autorización
+// Interceptor de response optimizado
 api.interceptors.response.use(
   (response) => {
+    // Log de responses en desarrollo
+    if (import.meta.env.MODE === 'development') {
+      console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+    }
     return response;
   },
   (error) => {
-    // Verificar si es un error 401 (No autorizado)
-    if (error.response?.status === 401) {
-      handleUnauthorized();
-      return Promise.reject(error);
+    const status = error.response?.status;
+    const url = error.config?.url || '';
+    
+    // Log de errores
+    console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${url} - ${status}`);
+    
+    // Manejar errores específicos
+    if (status === 401) {
+      // No interceptar errores 401 en el endpoint de login
+      if (!url.includes('Auth/login')) {
+        handleUnauthorized();
+      }
+    } else if (status === 403) {
+      notificationService.error('No tienes permisos para realizar esta acción', 'Acceso Denegado');
+    } else if (status === 404) {
+      notificationService.error('El recurso solicitado no existe', 'No Encontrado');
+    } else if (status >= 500) {
+      notificationService.error('Ha ocurrido un error interno del servidor', 'Error del Servidor');
     }
-
-    // Verificar si es un error de timeout de conexión
+    
+    // Verificar errores de timeout de conexión
     const errorMessage = error.response?.data?.message || error.message || '';
-    
-    // Log para depuración
-    console.log('Error detectado:', errorMessage);
-    console.log('¿Es timeout de conexión?', isConnectionTimeoutError(errorMessage));
-    
     if (isConnectionTimeoutError(errorMessage)) {
-      console.log('Ejecutando logout por timeout de conexión');
       handleConnectionTimeout();
     }
-
+    
     return Promise.reject(error);
   }
 );
@@ -162,10 +171,8 @@ function normalizeError(error: any) {
     const responseData = error.response.data;
     
     if (typeof responseData === 'string') {
-      // Si la respuesta es texto plano, usarla como mensaje
       message = responseData;
     } else if (responseData.error) {
-      // Si la respuesta tiene un campo 'error', úsalo como mensaje
       message = responseData.error;
     } else if (responseData.errors && typeof responseData.errors === 'object') {
       // Manejar errores de validación con estructura de campos
@@ -193,7 +200,6 @@ function normalizeError(error: any) {
       data = responseData.data ?? null;
       success = responseData.success ?? false;
     } else {
-      // Fallback para otros tipos de respuesta
       message = responseData.title || responseData.message || message;
       data = responseData;
     }
@@ -214,7 +220,7 @@ function normalizeError(error: any) {
   };
 }
 
-// Exportar el servicio de la API
+// Servicio de API optimizado
 export const apiService = {
   get: async (endpoint: string, params?: any) => {
     try {
@@ -224,6 +230,7 @@ export const apiService = {
       return normalizeError(error);
     }
   },
+  
   post: async (endpoint: string, data: any) => {
     try {
       const response = await api.post(endpoint, data);
@@ -232,6 +239,7 @@ export const apiService = {
       return normalizeError(error);
     }
   },
+  
   put: async (endpoint: string, data: any) => {
     try {
       const response = await api.put(endpoint, data);
@@ -240,6 +248,7 @@ export const apiService = {
       return normalizeError(error);
     }
   },
+  
   delete: async (endpoint: string, id: string | number) => {
     try {
       const response = await api.delete(`${endpoint}/${id}`);
@@ -248,6 +257,7 @@ export const apiService = {
       return normalizeError(error);
     }
   },
+  
   // Funciones utilitarias
   isConnectionTimeoutError,
   handleConnectionTimeout,
@@ -255,8 +265,6 @@ export const apiService = {
   
   /**
    * Extrae errores de validación de una respuesta de error
-   * @param errorResponse - Respuesta de error del apiService
-   * @returns Objeto con errores organizados por campo
    */
   getValidationErrors: (errorResponse: any) => {
     if (errorResponse.validationErrors) {
@@ -267,10 +275,11 @@ export const apiService = {
   
   /**
    * Verifica si una respuesta contiene errores de validación
-   * @param errorResponse - Respuesta de error del apiService
-   * @returns true si contiene errores de validación
    */
   hasValidationErrors: (errorResponse: any) => {
     return errorResponse.validationErrors && Object.keys(errorResponse.validationErrors).length > 0;
   }
 };
+
+// Exportar instancia de axios para uso directo con React Query
+export { api };

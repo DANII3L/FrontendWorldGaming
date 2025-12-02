@@ -3,7 +3,6 @@ import {
   MessageSquare,
   Send,
   Users,
-  Settings,
   Volume2,
   VolumeX,
   Smile,
@@ -13,10 +12,6 @@ import {
   Crown,
   Shield,
   Star,
-  Mic,
-  MicOff,
-  Video,
-  VideoOff
 } from 'lucide-react';
 
 interface ChatMessage {

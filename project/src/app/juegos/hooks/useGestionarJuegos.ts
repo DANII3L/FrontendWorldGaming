@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eliminarJuego, buscarJuegos, Juego } from '../service/juegosService';
-import { DynamicSearchParams } from '../../shared/services/dynamicService';
+import { DynamicSearchParams } from '../../shared/types';
 import { useCategories } from './useCategories';
 import { useConfirmation, useNotification } from '../../shared/contexts';
 import { getDisplayIcon } from '../../shared/utils';
@@ -27,9 +27,14 @@ export const useGestionarJuegos = () => {
   });
 
   // Hook de debounce para búsquedas de texto
-  const debouncedSearch = useDebounce((filters: DynamicSearchParams, pageNumber?: number, pageSize?: number) => {
-    searchGames(filters, pageNumber, pageSize);
-  }, 500);
+  const [debouncedFilters, setDebouncedFilters] = useState<DynamicSearchParams>({});
+  const [debouncedPageNumber, setDebouncedPageNumber] = useState<number | undefined>(undefined);
+  const [debouncedPageSize, setDebouncedPageSize] = useState<number | undefined>(undefined);
+  
+  // Aplicar debounce a los filtros
+  const debouncedSearchFilters = useDebounce(debouncedFilters, 500);
+  const debouncedPageNum = useDebounce(debouncedPageNumber, 500);
+  const debouncedPageSz = useDebounce(debouncedPageSize, 500);
 
   const { showConfirm } = useConfirmation();
   const { addNotification } = useNotification();
@@ -156,7 +161,9 @@ export const useGestionarJuegos = () => {
           delete newFilters.Nombre;
         }
         // Usar debounce para búsquedas de texto
-        debouncedSearch(newFilters, paginationInfo.pageNumber, paginationInfo.pageSize);
+        setDebouncedFilters(newFilters);
+        setDebouncedPageNumber(paginationInfo.pageNumber);
+        setDebouncedPageSize(paginationInfo.pageSize);
         return; // Salir temprano para evitar búsqueda inmediata
       case 'category':
         if (value && value !== 'all') {
@@ -190,6 +197,13 @@ export const useGestionarJuegos = () => {
     // Realizar búsqueda con los filtros actuales y nueva paginación
     searchGames(searchFilters, pageNumber, pageSize);
   };
+
+  // Efecto para manejar búsquedas con debounce
+  useEffect(() => {
+    if (Object.keys(debouncedSearchFilters).length > 0) {
+      searchGames(debouncedSearchFilters, debouncedPageNum, debouncedPageSz);
+    }
+  }, [debouncedSearchFilters, debouncedPageNum, debouncedPageSz]);
 
   // Cargar juegos al montar el componente
   useEffect(() => {

@@ -32,8 +32,8 @@ const HighlightCarousel: React.FC<HighlightCarouselProps> = ({
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isHovered, setIsHovered] = useState(false);
   const [progress, setProgress] = useState(0);
-  const intervalRef = useRef<number | null>(null);
-  const progressRef = useRef<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-play functionality with synchronized progress bar
   useEffect(() => {
@@ -93,6 +93,7 @@ const HighlightCarousel: React.FC<HighlightCarouselProps> = ({
   if (items.length === 0) return null;
 
   const currentItem = items[currentIndex];
+  if (!currentItem) return null;
 
   return (
     <div 

@@ -1,5 +1,5 @@
 import { apiService } from '../../shared/services/apiService';
-import { dynamicService, DynamicSearchParams } from '../../shared/services/dynamicService';
+import { DynamicSearchParams } from '../../shared/types';
 
 export interface Categoria {
   id: number;
@@ -19,16 +19,44 @@ export interface CategoriasResponse {
   };
 }
 
-  // Función para obtener todas las categorías usando DynamicService
-  const obtenerCategorias = async (): Promise<Categoria[]> => {
-    // Usar un pageSize muy grande para obtener todas las categorías
-    const response = await dynamicService.search('categorias_juegos', null, {}, 1, 1000);
-    return response.success ? response.data.listFind as Categoria[] : [];
-  };
+// Función para obtener todas las categorías
+const obtenerCategorias = async (): Promise<Categoria[]> => {
+  try {
+    const response = await apiService.get('CategoriasJuegos');
+    return response.success ? response.data : [];
+  } catch (error) {
+    console.error('Error al obtener categorías:', error);
+    return [];
+  }
+};
 
-// Función para buscar categorías con filtros usando DynamicService
+// Función para buscar categorías con filtros
 const buscarCategorias = async (filters: DynamicSearchParams = {}, pageNumber?: number, pageSize?: number) => {
-  return await dynamicService.search('categorias_juegos', null, filters, pageNumber, pageSize);
+  try {
+    // Construir parámetros de consulta
+    const params: any = {
+      ...filters,
+      pageNumber: pageNumber || 1,
+      pageSize: pageSize || 10
+    };
+
+    // Remover parámetros vacíos
+    Object.keys(params).forEach(key => {
+      if (params[key] === undefined || params[key] === null || params[key] === '') {
+        delete params[key];
+      }
+    });
+
+    const response = await apiService.get('CategoriasJuegos', params);
+    return response;
+  } catch (error) {
+    console.error('Error al buscar categorías:', error);
+    return {
+      success: false,
+      message: 'Error al buscar categorías',
+      data: { listFind: [], totalRecords: 0, pageNumber: 1, pageSize: 10 }
+    };
+  }
 };
 
 // Función para obtener una categoría por ID

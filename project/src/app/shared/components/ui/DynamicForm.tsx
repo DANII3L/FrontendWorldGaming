@@ -195,7 +195,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           <div className="relative z-[99999999]">
             <CategoryPicker
               categories={field.categoryConfig?.categories || []}
-              selectedCategoryId={value ? parseInt(value) : undefined}
+              {...(value && { selectedCategoryId: parseInt(value) })}
               onCategorySelect={(category) => handleInputChange(field.name, category ? category.id.toString() : '')}
               placeholder={field.placeholder || 'Seleccionar categoría...'}
               loading={field.categoryConfig?.loading || false}
@@ -307,11 +307,11 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       case 'phone':
         return (
           <PhoneInput
-            value={value}
+            value={value || ''}
             onChange={(phoneValue) => handleInputChange(field.name, phoneValue)}
-            placeholder={field.placeholder}
-            required={field.required}
-            className={field.className}
+            placeholder={field.placeholder || ''}
+            required={field.required || false}
+            className={field.className || ''}
           />
         );
 

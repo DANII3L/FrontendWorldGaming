@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useJuegos } from './useJuegos';
 import { apiService } from '../../shared/services/apiService';
-import { dynamicService } from '../../shared/services/dynamicService';
+// import { dynamicService } from '../../shared/services/dynamicService';
 import { useNotification } from '../../shared/components/ui/UnifiedNotificationSystem';
 import { Torneo } from './useTorneos';
 import { TournamentMapper } from '../mappers';
@@ -119,22 +119,22 @@ export const useCrearTorneo = () => {
     setFormData(prev => {
       const newData = {
         ...prev,
-        name: values.name !== undefined ? values.name : prev.name,
-        game: values.game !== undefined ? values.game : prev.game,
-        description: values.description !== undefined ? values.description : prev.description,
-        difficulty: values.difficulty !== undefined ? values.difficulty : prev.difficulty,
-        status: values.status !== undefined ? values.status : prev.status,
-        cantidadEquipos: values.cantidadEquipos !== undefined ? values.cantidadEquipos : prev.cantidadEquipos,
-        entryFee: values.entryFee !== undefined ? values.entryFee : prev.entryFee,
-        prize: values.prize !== undefined ? values.prize : prev.prize,
-        startDate: values.startDate !== undefined ? values.startDate : prev.startDate,
-        endDate: values.endDate !== undefined ? values.endDate : prev.endDate,
-        isActive: values.isActive !== undefined ? values.isActive : prev.isActive
+        name: values['name'] !== undefined ? values['name'] : prev.name,
+        game: values['game'] !== undefined ? values['game'] : prev.game,
+        description: values['description'] !== undefined ? values['description'] : prev.description,
+        difficulty: values['difficulty'] !== undefined ? values['difficulty'] : prev.difficulty,
+        status: values['status'] !== undefined ? values['status'] : prev.status,
+        cantidadEquipos: values['cantidadEquipos'] !== undefined ? values['cantidadEquipos'] : prev.cantidadEquipos,
+        entryFee: values['entryFee'] !== undefined ? values['entryFee'] : prev.entryFee,
+        prize: values['prize'] !== undefined ? values['prize'] : prev.prize,
+        startDate: values['startDate'] !== undefined ? values['startDate'] : prev.startDate,
+        endDate: values['endDate'] !== undefined ? values['endDate'] : prev.endDate,
+        isActive: values['isActive'] !== undefined ? values['isActive'] : prev.isActive
       };
       
       // Recalcular maxParticipants solo si cantidadEquipos cambió
-      if (values.cantidadEquipos !== undefined) {
-        newData.maxParticipants = calculateMaxParticipants(values.cantidadEquipos, prev.titulares);
+      if (values['cantidadEquipos'] !== undefined) {
+        newData.maxParticipants = calculateMaxParticipants(values['cantidadEquipos'], prev.titulares);
       } else {
         newData.maxParticipants = prev.maxParticipants;
       }
@@ -155,16 +155,11 @@ export const useCrearTorneo = () => {
     try {
       setLoadingTournament(true);
       setTournamentError(null);
-      const response = await dynamicService.search<Torneo>(
-        'torneos',
-        null,
-        { Id: tournamentId },
-        null,
-        null
-      );
+      // TODO: Reemplazar con React Query cuando esté configurado
+      const response = await apiService.get(`Torneos/${tournamentId}`);
       
-      if (response.success && response.data.listFind && response.data.listFind.length > 0) {
-        const tournament: Torneo = response.data.listFind[0];
+      if (response.success && response.data) {
+        const tournament: Torneo = response.data;
         
         try {
           // Usar el mapper para convertir los datos del torneo al formulario

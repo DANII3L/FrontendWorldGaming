@@ -3,7 +3,17 @@ import { notificationService } from './notificationService';
 import { navigationService } from './navigationService';
 import { performGlobalLogout } from '../../auth/AuthContext';
 
-const API_BASE_URL = 'https://localhost:7082/api/'; // URL de desarrollo
+// Obtener URL base de la API
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+// Debug: Verificar que las variables se carguen correctamente
+if (import.meta.env.MODE === 'development') {
+  console.log('🔧 Variables de entorno cargadas:', {
+    VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'NO DEFINIDA',
+    VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID ? 'DEFINIDA' : 'NO DEFINIDA',
+    MODE: import.meta.env.MODE
+  });
+}
 
 // Función para verificar si es un error de timeout de conexión
 const isConnectionTimeoutError = (message: string): boolean => {
@@ -59,6 +69,11 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Si los datos son FormData, dejar que axios establezca el Content-Type automáticamente
+    if (config.data instanceof FormData && config.headers) {
+      delete config.headers['Content-Type'];
     }
     
     // Log de requests en desarrollo
@@ -117,43 +132,59 @@ api.interceptors.response.use(
 // Función para normalizar la respuesta
 function normalizeResponse(response: any) {
   const status = response?.status ?? 200;
+  const responseData = response?.data; // El cuerpo de la respuesta HTTP (ya desenvuelto por axios)
   
-  // Si la respuesta es paginada (tiene listFind)
-  if (response?.data?.listFind && Array.isArray(response.data.listFind)) {
+  // Si la respuesta es paginada (tiene listFind en data.listFind)
+  // Estructura: { success: true, message: "...", data: { listFind: [...], totalRecords: ... } }
+  if (responseData?.data?.listFind && Array.isArray(responseData.data.listFind)) {
     return {
-      data: response.data.listFind,
-      totalRecords: response.data.totalRecords,
-      pageNumber: response.data.pageNumber,
-      pageSize: response.data.pageSize,
-      message: response.message ?? 'Operación exitosa',
-      success: response.success ?? true,
+      data: responseData.data.listFind,
+      totalRecords: responseData.data.totalRecords,
+      pageNumber: responseData.data.pageNumber,
+      pageSize: responseData.data.pageSize,
+      message: responseData.message ?? 'Operación exitosa',
+      success: responseData.success ?? true,
+      status
+    };
+  }
+  
+  // Si la respuesta tiene listFind directamente en data (sin anidar en data.data)
+  // Estructura: { listFind: [...], totalRecords: ... }
+  if (responseData?.listFind && Array.isArray(responseData.listFind)) {
+    return {
+      data: responseData.listFind,
+      totalRecords: responseData.totalRecords,
+      pageNumber: responseData.pageNumber,
+      pageSize: responseData.pageSize,
+      message: responseData.message ?? 'Operación exitosa',
+      success: responseData.success ?? true,
       status
     };
   }
   
   // Si la respuesta tiene success/message en data (operaciones anidadas)
-  if (response?.data?.success !== undefined || response?.data?.message !== undefined) {
+  if (responseData?.success !== undefined || responseData?.message !== undefined) {
     return {
-      data: response.data.data ?? response.data,
-      message: response.data.message ?? 'Operación exitosa',
-      success: response.data.success ?? true,
+      data: responseData.data ?? responseData,
+      message: responseData.message ?? 'Operación exitosa',
+      success: responseData.success ?? true,
       status
     };
   }
   
   // Si la respuesta tiene success/message en nivel superior
-  if (response?.success !== undefined || response?.message !== undefined) {
+  if (responseData?.success !== undefined || responseData?.message !== undefined) {
     return {
-      data: response.data,
-      message: response.message ?? 'Operación exitosa',
-      success: response.success ?? true,
+      data: responseData.data ?? responseData,
+      message: responseData.message ?? 'Operación exitosa',
+      success: responseData.success ?? true,
       status
     };
   }
   
   // Fallback: respuesta normal
   return {
-    data: response?.data ?? null,
+    data: responseData ?? null,
     message: 'Operación exitosa',
     success: true,
     status

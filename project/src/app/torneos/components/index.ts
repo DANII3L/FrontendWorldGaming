@@ -1,5 +1,4 @@
 // Tournament Cards
-export { default as TournamentCard } from './TournamentCard';
 export { default as MyTournamentCard } from './MyTournamentCard';
 export { default as TournamentCardMinimal } from './TournamentCardMinimal';
 export { default as MyTournamentCardMinimal } from './MyTournamentCardMinimal';

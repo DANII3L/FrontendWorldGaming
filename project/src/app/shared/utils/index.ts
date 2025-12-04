@@ -304,18 +304,17 @@ export const getDisplayIcon = (icon: string): string => {
 
 // ===== UTILIDADES DE DIFICULTAD =====
 export const getDifficultyColor = (difficulty: string): string => {
-  switch (difficulty.toLowerCase()) {
-    case 'beginner':
-      return 'text-green-600 bg-green-100';
-    case 'intermediate':
-      return 'text-yellow-600 bg-yellow-100';
-    case 'advanced':
-      return 'text-orange-600 bg-orange-100';
-    case 'expert':
-      return 'text-red-600 bg-red-100';
-    default:
-      return 'text-gray-600 bg-gray-100';
+  const lower = difficulty.toLowerCase();
+  if (lower === 'principiante' || lower === 'amateur') {
+    return 'bg-green-500/20 text-green-400 border-green-500/30';
   }
+  if (lower === 'intermedio' || lower === 'semi-pro') {
+    return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+  }
+  if (lower === 'experto' || lower === 'profesional') {
+    return 'bg-red-500/20 text-red-400 border-red-500/30';
+  }
+  return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
 };
 
 // ===== UTILIDADES DE FECHAS =====

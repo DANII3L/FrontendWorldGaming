@@ -150,9 +150,9 @@ export const API_ENDPOINTS = {
     SEARCH: 'Users/search'
   },
   TEAMS: {
-    BASE: 'Teams',
-    SEARCH: 'Teams/search',
-    REQUESTS: 'Teams/requests'
+    BASE: 'Equipo',
+    SEARCH: 'Equipo/search',
+    REQUESTS: 'Equipo/requests'
   },
   TOURNAMENTS: {
     BASE: 'Tournaments',

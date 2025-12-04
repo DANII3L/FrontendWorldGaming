@@ -1,4 +1,4 @@
-import React, { useEffect, useState, memo } from 'react';
+import React, { useEffect, useState, memo, useRef } from 'react';
 import { Card } from './Card';
 import Pagination from '../Pagination';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -74,6 +74,8 @@ interface DynamicCardListProps {
     onRefresh: () => void;
     isLoading: boolean;
   }) => React.ReactNode;
+  // Valores iniciales de filtros desde el hook (para sincronización)
+  initialFilterValues?: Record<string, any>;
 }
 
 const DynamicCardList: React.FC<DynamicCardListProps> = memo(({
@@ -101,7 +103,8 @@ const DynamicCardList: React.FC<DynamicCardListProps> = memo(({
   emptyIcon: EmptyIcon,
   gridClassName,
   renderPagination,
-  renderFilters
+  renderFilters,
+  initialFilterValues
 }) => {
   // Determinar si estamos en modo datos estáticos
   const isStaticMode = staticData !== undefined;
@@ -147,7 +150,54 @@ const DynamicCardList: React.FC<DynamicCardListProps> = memo(({
     }
   }, [staticData, isStaticMode]);
 
+  // Función helper para mapear claves de filtros a claves del backend
+  const mapFilterKeyToBackendKey = (filterKey: string): string[] => {
+    // Mapeo de claves conocidas
+    const keyMap: Record<string, string> = {
+      'estado': 'Estado',
+      'dificultad': 'Dificultad',
+      'juego': 'JuegoId',
+      'search': 'Nombre',
+      'categoria': 'CategoriaId'
+    };
+    
+    const backendKey = keyMap[filterKey.toLowerCase()];
+    if (backendKey) {
+      return [filterKey, backendKey];
+    }
+    
+    // Si no hay mapeo específico, intentar con mayúscula
+    const capitalizedKey = filterKey.charAt(0).toUpperCase() + filterKey.slice(1);
+    return [filterKey, capitalizedKey];
+  };
 
+  // Sincronizar filterValues con initialFilterValues cuando cambien
+  useEffect(() => {
+    if (initialFilterValues && renderFilters) {
+      const mapped: { [key: string]: string } = {};
+      filters.forEach(filter => {
+        const possibleKeys = mapFilterKeyToBackendKey(filter.key);
+        // Buscar el valor en las claves posibles
+        for (const key of possibleKeys) {
+          if (initialFilterValues[key] !== undefined && initialFilterValues[key] !== null && initialFilterValues[key] !== '') {
+            mapped[filter.key] = initialFilterValues[key];
+            break;
+          }
+        }
+      });
+      setFilterValues(prev => {
+        // Solo actualizar si hay cambios
+        const hasChanges = Object.keys(mapped).some(key => prev[key] !== mapped[key]) ||
+          Object.keys(prev).some(key => mapped[key] === undefined && prev[key] !== undefined);
+        return hasChanges ? mapped : prev;
+      });
+    }
+  }, [initialFilterValues, renderFilters, filters]);
+
+
+
+  // Ref para el debounce del campo de búsqueda
+  const searchDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filtros locales (search y select)
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,20 +205,45 @@ const DynamicCardList: React.FC<DynamicCardListProps> = memo(({
     setSearch(value);
     setCurrentPage(1);
     
-    // Llamar al callback onChange si está disponible
-    const filter = filters?.find(f => f.key === 'search');
-    if (filter?.onChange) {
-      filter.onChange(value);
+    // Limpiar timeout anterior
+    if (searchDebounceTimeoutRef.current) {
+      clearTimeout(searchDebounceTimeoutRef.current);
     }
+    
+    // Crear nuevo timeout para debounce (500ms)
+    searchDebounceTimeoutRef.current = setTimeout(() => {
+      // Llamar al callback onChange si está disponible
+      const filter = filters?.find(f => f.key === 'search');
+      if (filter?.onChange) {
+        filter.onChange(value);
+      }
+    }, 500);
   };
+
+  // Limpiar timeout al desmontar
+  useEffect(() => {
+    return () => {
+      if (searchDebounceTimeoutRef.current) {
+        clearTimeout(searchDebounceTimeoutRef.current);
+      }
+    };
+  }, []);
   const handleSelect = (key: string, value: string) => {
-    setFilterValues(prev => ({ ...prev, [key]: value }));
+    // Actualizar estado local solo si no hay renderFilters o si el filtro no tiene onChange personalizado
+    // Cuando hay renderFilters y el filtro tiene onChange, el onChange manejará la actualización
+    const filter = filters?.find(f => f.key === key);
+    if (!renderFilters || !filter?.onChange) {
+      setFilterValues(prev => ({ ...prev, [key]: value }));
+    }
     setCurrentPage(1);
     
-    // Llamar al callback onChange si está disponible
-    const filter = filters?.find(f => f.key === key);
+    // Llamar al callback onChange si está disponible (esto actualizará el estado del hook)
     if (filter?.onChange) {
       filter.onChange(value);
+      // Si el filtro tiene onChange personalizado, también actualizar el estado local para mantener sincronización
+      if (renderFilters) {
+        setFilterValues(prev => ({ ...prev, [key]: value }));
+      }
     }
   };
 

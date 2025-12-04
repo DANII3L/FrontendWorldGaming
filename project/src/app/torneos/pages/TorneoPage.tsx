@@ -33,7 +33,8 @@ const TorneosPage: React.FC = () => {
     handlePageChange: handlePageChangeTorneos,
     handlePageSizeChange: handlePageSizeChangeTorneos,
     getFilterOptions,
-    refreshTorneos
+    refreshTorneos,
+    searchFilters
   } = useTorneos();
 
   const {
@@ -317,6 +318,7 @@ const TorneosPage: React.FC = () => {
             gridClassName="grid-cols-1 lg:grid-cols-2 gap-6"
             renderFilters={TournamentFilters}
             renderPagination={TournamentPagination}
+            initialFilterValues={searchFilters}
             serverPagination={{
               totalRecords: totalItems,
               pageNumber: pageNumber,

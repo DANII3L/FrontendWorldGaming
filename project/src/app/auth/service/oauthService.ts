@@ -1,120 +1,37 @@
 import { apiService } from '../../shared/services/apiService';
 
-/**
- * Inicia el flujo de autenticación con Google
- * Obtiene la URL de autenticación del backend y redirige
- */
-export const initiateGoogleLogin = async (): Promise<void> => {
-  try {
-    const response = await apiService.get('Auth/google/url');
-    
-    if (response.success && response.data?.authUrl) {
-      window.location.href = response.data.authUrl;
-    } else {
-      throw new Error(response.message || 'Error al obtener URL de autenticación de Google');
-    }
-  } catch (error: any) {
-    throw new Error(error.message || 'Error al iniciar sesión con Google');
-  }
-};
+export type ProviderType = 'Google' | 'Steam';
 
-/**
- * Inicia el flujo de autenticación con Steam
- * Obtiene la URL de autenticación del backend y redirige
- */
-export const initiateSteamLogin = async (): Promise<void> => {
-  try {
-    const response = await apiService.get('Auth/steam/url');
-    
-    if (response.success && response.data?.authUrl) {
-      window.location.href = response.data.authUrl;
-    } else {
-      throw new Error(response.message || 'Error al obtener URL de autenticación de Steam');
-    }
-  } catch (error: any) {
-    throw new Error(error.message || 'Error al iniciar sesión con Steam');
-  }
-};
-
-/**
- * Procesa el callback de Google
- * Envía el código al backend para que maneje toda la lógica
- */
-export const processGoogleCallback = async (code: string, state?: string): Promise<{
-  success: boolean;
-  token?: string;
-  user?: any;
-  requiresAdditionalData?: boolean;
-  message?: string;
-}> => {
-  try {
-    const response = await apiService.post('Auth/google/callback', { code, state });
-    
-    if (response.success) {
-      return {
-        success: true,
-        token: response.data?.token,
-        user: response.data?.user,
-        requiresAdditionalData: response.data?.requiresAdditionalData || false
-      };
-    }
-    
-    return {
-      success: false,
-      message: response.message || 'Error en la autenticación con Google'
-    };
-  } catch (error: any) {
-    throw new Error(error.message || 'Error al procesar callback de Google');
-  }
-};
-
-/**
- * Procesa el callback de Steam
- * Envía los parámetros OpenID al backend para que maneje toda la lógica
- */
-export const processSteamCallback = async (params: Record<string, string>): Promise<{
-  success: boolean;
-  token?: string;
-  user?: any;
-  requiresAdditionalData?: boolean;
-  message?: string;
-}> => {
-  try {
-    const response = await apiService.post('Auth/steam/callback', params);
-    
-    if (response.success) {
-      return {
-        success: true,
-        token: response.data?.token,
-        user: response.data?.user,
-        requiresAdditionalData: response.data?.requiresAdditionalData || false
-      };
-    }
-    
-    return {
-      success: false,
-      message: response.message || 'Error en la autenticación con Steam'
-    };
-  } catch (error: any) {
-    throw new Error(error.message || 'Error al procesar callback de Steam');
-  }
-};
-
-/**
- * Completa el registro con datos adicionales requeridos
- */
-export const completeOAuthRegistration = async (additionalData: {
-  telefono?: string;
-  password?: string;
-  [key: string]: any;
-}): Promise<{
+export interface OAuthLoginResult {
   success: boolean;
   token?: string;
   user?: any;
   message?: string;
-}> => {
+}
+
+/**
+ * Función unificada para autenticación con proveedores externos (Google, Steam)
+ * @param providerType - Tipo de proveedor ('Google' o 'Steam')
+ * @param tokenOrId - Token de acceso (Google) o ID del usuario (Steam)
+ * @returns Resultado de la autenticación con token JWT y datos del usuario
+ */
+export const loginWithExternalProvider = async (
+  providerType: ProviderType,
+  tokenOrId: string
+): Promise<OAuthLoginResult> => {
+  if (!providerType || !['Google', 'Steam'].includes(providerType)) {
+    throw new Error('Tipo de proveedor inválido. Debe ser "Google" o "Steam"');
+  }
+
+  if (!tokenOrId || tokenOrId.trim() === '') {
+    throw new Error('El token o ID del proveedor es requerido');
+  }
+
   try {
-    const response = await apiService.post('Auth/oauth/complete', additionalData);
+    const response = await apiService.post('Auth/login/external', {
+      ProviderType: providerType,
+      ProviderTokenOrId: tokenOrId.trim()
+    });
     
     if (response.success) {
       return {
@@ -126,10 +43,26 @@ export const completeOAuthRegistration = async (additionalData: {
     
     return {
       success: false,
-      message: response.message || 'Error al completar el registro'
+      message: response.message || `Error en la autenticación con ${providerType}`
     };
   } catch (error: any) {
-    throw new Error(error.message || 'Error al completar el registro');
+    throw new Error(error.message || `Error al autenticar con ${providerType}`);
   }
+};
+
+/**
+ * @deprecated Usar loginWithExternalProvider('Google', token) en su lugar
+ * Envía el token de Google al backend para validación y obtención de JWT
+ */
+export const loginWithGoogleToken = async (token: string): Promise<OAuthLoginResult> => {
+  return loginWithExternalProvider('Google', token);
+};
+
+/**
+ * @deprecated Usar loginWithExternalProvider('Steam', steamId) en su lugar
+ * Envía el Steam ID al backend para validación y obtención de JWT
+ */
+export const loginWithSteamId = async (steamId: string): Promise<OAuthLoginResult> => {
+  return loginWithExternalProvider('Steam', steamId);
 };
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { FaTimes, FaSpinner, FaUserPlus } from 'react-icons/fa';
 import DynamicForm, { FormField } from '../../shared/components/ui/DynamicForm';
 import LoadingScreen from '../../shared/components/ui/LoadingScreen';
 import { register } from '../service/segServices';
@@ -100,26 +100,26 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
     const failedRule = rules.find(rule => !rule.test);
     return {
       isValid: !failedRule,
-      message: failedRule?.message
+      message: failedRule?.message || ''
     };
   };
 
   const handleSubmit = async (values: Record<string, any>) => {
     // Validar campos requeridos
-    if (!values.Nombre || !values.Apellidos || !values.Correo || !values.Password || !values.Alias) {
+    if (!values['Nombre'] || !values['Apellidos'] || !values['Correo'] || !values['Password'] || !values['Alias']) {
       addNotification('Por favor completa todos los campos obligatorios', 'warning');
       return;
     }
 
     // Validar contraseña
-    const passwordValidation = validatePassword(values.Password);
+    const passwordValidation = validatePassword(values['Password']);
     if (!passwordValidation.isValid) {
       addNotification(passwordValidation.message || 'Contraseña inválida', 'error');
       return;
     }
 
     // Validar que las contraseñas coincidan
-    if (values.Password !== values.confirmPassword) {
+    if (values['Password'] !== values['confirmPassword']) {
       addNotification('Las contraseñas no coinciden', 'error');
       return;
     }
@@ -127,14 +127,13 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
     setIsLoading(true);
 
     try {
-      // Preparar datos para envío
       const userData = {
-        Nombre: values.Nombre,
-        Apellidos: values.Apellidos,
-        Correo: values.Correo,
-        Password: values.Password,
-        Telefono: values.Telefono || null,
-        Alias: values.Alias
+        Nombre: values['Nombre'],
+        Apellidos: values['Apellidos'],
+        Correo: values['Correo'],
+        Password: values['Password'],
+        Telefono: values['Telefono'] || null,
+        Alias: values['Alias']
       };
 
       // Llamar al servicio de registro
@@ -226,13 +225,15 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
               onClick={onClose}
               className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors duration-200"
             >
-              <X size={24} />
+              {/* @ts-ignore - react-icons type compatibility */}
+              <FaTimes size={24} />
             </button>
 
             {/* Icono */}
             <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <div className="w-4 h-4 bg-green-500 rounded-sm"></div>
+                {/* @ts-ignore - react-icons type compatibility */}
+                <FaUserPlus className="w-5 h-5 text-green-600" />
               </div>
             </div>
 
@@ -263,7 +264,8 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
                   >
                     {loading ? (
                       <div className="flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin mr-3" />
+                        {/* @ts-ignore - react-icons type compatibility */}
+                  <FaSpinner className="w-6 h-6 animate-spin mr-3" />
                         {submitText}
                       </div>
                     ) : (
@@ -274,35 +276,6 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
                     {/* Efecto de resplandor */}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-green-400/20 to-emerald-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </button>
-
-                  {/* Separador */}
-                  <div className="flex items-center justify-center space-x-4 py-2">
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-                    <span className="text-white/60 text-sm font-medium px-3">o regístrate con</span>
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-                  </div>
-
-                  {/* Botones de redes sociales */}
-                  <div className="flex justify-center space-x-3">
-                    <button
-                      type="button"
-                      className="flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl py-4 px-4 hover:bg-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-105 active:scale-95 group"
-                    >
-                      <div className="w-6 h-6 bg-gradient-to-br from-red-400 to-red-600 rounded-lg group-hover:scale-110 transition-transform duration-200"></div>
-                    </button>
-                    <button
-                      type="button"
-                      className="flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl py-4 px-4 hover:bg-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-105 active:scale-95 group"
-                    >
-                      <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg group-hover:scale-110 transition-transform duration-200"></div>
-                    </button>
-                    <button
-                      type="button"
-                      className="flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl py-4 px-4 hover:bg-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-105 active:scale-95 group"
-                    >
-                      <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg group-hover:scale-110 transition-transform duration-200"></div>
-                    </button>
-                  </div>
 
                   {/* Enlace para iniciar sesión */}
                   <div className="text-center pt-4">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 
@@ -27,8 +27,62 @@ const TournamentFilters: React.FC<TournamentFiltersProps> = ({
   onRefresh,
   isLoading
 }) => {
+  // Llamar a los hooks siempre, antes de cualquier lógica condicional
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [searchValue, setSearchValue] = useState(() => {
+    const searchFilter = filters.find(f => f.type === 'search');
+    const searchKey = searchFilter?.key || 'search';
+    return filterValues[searchKey] || '';
+  });
+
+  // Calcular searchFilter y selectFilters después de los hooks
   const searchFilter = filters.find(f => f.type === 'search');
   const selectFilters = filters.filter(f => f.type === 'select');
+  const searchKey = searchFilter?.key || 'search';
+
+  // Sincronizar searchValue con filterValues cuando cambien externamente
+  useEffect(() => {
+    if (!searchFilter) return;
+    const externalValue = filterValues[searchKey] || '';
+    setSearchValue(prevValue => {
+      if (externalValue !== prevValue) {
+        return externalValue;
+      }
+      return prevValue;
+    });
+  }, [filterValues, searchKey, searchFilter]);
+
+  // Función para manejar el cambio de búsqueda con debounce
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+    
+    // Limpiar timeout anterior
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    // Crear nuevo timeout para debounce (500ms)
+    debounceTimeoutRef.current = setTimeout(() => {
+      // Si el filtro tiene un onChange personalizado, usarlo directamente
+      if (searchFilter?.onChange) {
+        searchFilter.onChange(value);
+      } else {
+        // Si no, usar el onFilterChange genérico
+        if (searchFilter) {
+          onFilterChange(searchFilter.key, value);
+        }
+      }
+    }, 500);
+  };
+
+  // Limpiar timeout al desmontar
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="bg-white/5 backdrop-blur-lg p-4 sm:p-6 rounded-2xl border border-white/10 shadow-lg relative z-50">
@@ -40,8 +94,8 @@ const TournamentFilters: React.FC<TournamentFiltersProps> = ({
               <input
                 type="text"
                 placeholder={searchFilter.placeholder || 'Buscar torneos...'}
-                value={filterValues[searchFilter.key] || ''}
-                onChange={(e) => onFilterChange(searchFilter.key, e.target.value)}
+                value={searchValue}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-4 pr-4 py-2 bg-slate-700/80 border border-orange-500/30 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-orange-500 transition-colors text-sm"
               />
             </div>
@@ -53,7 +107,16 @@ const TournamentFilters: React.FC<TournamentFiltersProps> = ({
               <CustomSelect
                 options={selectFilter.options || []}
                 value={filterValues[selectFilter.key] || ''}
-                onChange={(value) => onFilterChange(selectFilter.key, value)}
+                onChange={(value) => {
+                  // Si el filtro tiene un onChange personalizado, usarlo directamente
+                  // Esto permite que el componente padre controle la clave del filtro
+                  if (selectFilter.onChange) {
+                    selectFilter.onChange(value);
+                  } else {
+                    // Si no, usar el onFilterChange genérico
+                    onFilterChange(selectFilter.key, value);
+                  }
+                }}
                 placeholder={selectFilter.placeholder || 'Todos'}
                 className="w-full"
               />

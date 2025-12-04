@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Check } from 'lucide-react';
+import { Search, Check, ChevronDown } from 'lucide-react';
 import { Category } from '../../interface/IFieldConfig';
 
 // Re-exportar la interfaz Category para compatibilidad
@@ -115,9 +115,7 @@ const CategoryPicker: React.FC<CategoryPickerProps> = ({
               )}
             </div>
             <div className="text-white/40">
-              <svg className={`${iconSize}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <ChevronDown className={iconSize} />
             </div>
           </div>
         ) : (
@@ -125,9 +123,7 @@ const CategoryPicker: React.FC<CategoryPickerProps> = ({
             <div className={`${iconSize} rounded-full bg-white/10 border-2 border-white/20 flex-shrink-0`}></div>
             <span className={`text-white/60 ${textSize}`}>{placeholder}</span>
             <div className="text-white/40 ml-auto">
-              <svg className={`${iconSize}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <ChevronDown className={iconSize} />
             </div>
           </div>
         )}

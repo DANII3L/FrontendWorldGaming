@@ -12,6 +12,9 @@ import {
 import DynamicForm, { FormField } from '../../shared/components/ui/DynamicForm';
 import GameRequirements from '../components/GameRequirements';
 import TeamRosterManager from '../components/TeamRosterManager';
+import { apiService } from '../../shared/services/apiService';
+import { useNotification } from '../../shared/components/ui/UnifiedNotificationSystem';
+import { useAuth } from '../../auth/AuthContext';
 
 interface Player {
   id: string;
@@ -33,6 +36,7 @@ interface GameRequirement {
 interface TeamForm {
   name: string;
   description: string;
+  tag?: string;
   logo?: File;
   logoPreview?: string;
   captain: string;
@@ -50,9 +54,13 @@ interface TeamRoster {
 const CrearEquipo: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { addNotification } = useNotification();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<TeamForm>({
     name: '',
     description: '',
+    tag: '',
     captain: '',
     gameRequirements: [],
     isActive: true
@@ -105,10 +113,12 @@ const CrearEquipo: React.FC = () => {
     }
   ];
 
-  const handleInputChange = (name: string, value: any) => {
+  const handleInputChange = (values: Record<string, any>) => {
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      ...(values['name'] !== undefined && { name: values['name'] }),
+      ...(values['description'] !== undefined && { description: values['description'] }),
+      ...(values['captain'] !== undefined && { captain: values['captain'] })
     }));
   };
 
@@ -151,13 +161,86 @@ const CrearEquipo: React.FC = () => {
     setShowRosterManager(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Equipo creado:', formData);
-    // Aquí iría la lógica para guardar el equipo
-    // Después de guardar exitosamente, navegar de vuelta a la pantalla de origen
-    const returnPath = location.state?.from || '/worldGaming/equipos';
-    navigate(returnPath);
+    
+    // Validaciones básicas
+    if (!formData.name || !formData.name.trim()) {
+      addNotification('El nombre del equipo es requerido', 'error');
+      return;
+    }
+
+    if (!user || !user.id) {
+      addNotification('Debes estar autenticado para crear un equipo', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Crear FormData para enviar al API (el endpoint espera [FromForm])
+      const formDataToSend = new FormData();
+      
+      // Agregar campos del objeto Equipo (prefijo 'equipo.' porque el endpoint espera [FromForm] Equipo equipo)
+      formDataToSend.append('equipo.Nombre', formData.name.trim());
+      if (formData.description && formData.description.trim()) {
+        formDataToSend.append('equipo.Descripcion', formData.description.trim());
+      }
+      if (formData.tag && formData.tag.trim()) {
+        formDataToSend.append('equipo.Tag', formData.tag.trim());
+      }
+      // CreadorId es requerido (int) - asegurarse de que sea un número válido
+      const creadorId = Number(user.id);
+      if (isNaN(creadorId) || creadorId <= 0) {
+        addNotification('Error: ID de usuario inválido', 'error');
+        setIsLoading(false);
+        return;
+      }
+      
+      formDataToSend.append('equipo.CreadorId', creadorId.toString());
+      formDataToSend.append('equipo.IsActive', formData.isActive ? 'true' : 'false');
+      
+      // Debug: Verificar que el CreadorId se esté agregando
+      if (import.meta.env.MODE === 'development') {
+        console.log('🔍 Debug - CreadorId a enviar:', creadorId, 'tipo:', typeof creadorId);
+        console.log('🔍 Debug - Usuario completo:', user);
+        // Verificar todos los valores del FormData
+        console.log('🔍 Debug - FormData contents:');
+        for (const [key, value] of formDataToSend.entries()) {
+          if (value instanceof File) {
+            console.log(`  ${key}: [File] ${value.name} (${value.size} bytes)`);
+          } else {
+            console.log(`  ${key}:`, value, `(tipo: ${typeof value})`);
+          }
+        }
+      }
+      
+      // Agregar archivos si existen (el endpoint espera [FromForm] IFormFile? logo e imagen)
+      if (formData.logo) {
+        formDataToSend.append('logo', formData.logo);
+        // Si no hay imagen separada, usar el logo como imagen también
+        formDataToSend.append('imagen', formData.logo);
+      }
+
+      // Enviar al API usando axios directamente para FormData
+      const response = await apiService.post('Equipo/CrearEquipo', formDataToSend);
+
+      if (response.success) {
+        addNotification('¡Equipo creado exitosamente!', 'success');
+        const returnPath = location.state?.from || '/worldGaming/equipos';
+        navigate(returnPath);
+      } else {
+        addNotification(response.message || 'Error al crear el equipo. Por favor intenta de nuevo.', 'error');
+      }
+    } catch (error: any) {
+      console.error('Error al crear el equipo:', error);
+      addNotification(
+        error.message || 'Error al crear el equipo. Por favor intenta de nuevo.',
+        'error'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -192,10 +275,13 @@ const CrearEquipo: React.FC = () => {
             </button>
             <button
               onClick={handleSubmit}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
+              disabled={isLoading}
+              className={`px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 ${
+                isLoading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              <Save className="w-5 h-5" />
-              <span>Crear Equipo</span>
+              <Save className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>{isLoading ? 'Creando...' : 'Crear Equipo'}</span>
             </button>
           </div>
         </div>
@@ -213,7 +299,11 @@ const CrearEquipo: React.FC = () => {
               <div className="w-full">
                 <DynamicForm
                   fields={formFields}
-                  values={formData}
+                  initialValues={{
+                    name: formData.name,
+                    description: formData.description,
+                    captain: formData.captain
+                  }}
                   onChange={handleInputChange}
                   onSubmit={() => {}}
                 />

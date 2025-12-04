@@ -19,6 +19,8 @@ export { default as ReactColorPicker } from './ReactColorPicker';
 
 // Componentes de UI básicos
 export { Card, CardHeader, CardTitle, CardContent } from './Card';
+export { default as CardMinimal } from './CardMinimal';
+export type { CardMinimalProps, ChipConfig, DetailItem, ActionButton } from './CardMinimal';
 
 // Componentes especializados
 export { default as LoadingScreen } from './LoadingScreen';

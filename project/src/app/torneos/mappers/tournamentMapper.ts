@@ -4,8 +4,9 @@ import {
   TOURNAMENT_DIFFICULTY, 
   TOURNAMENT_STATUS 
 } from '../../shared/constants/tournament';
-import { validateDateRange } from '../../shared/utils';
+import { validateDateRange } from '../../shared/utils/dateUtils';
 import { BaseMapper, FieldMapping, ValidationConfig } from '../../shared/mappers';
+import { ValidationResult } from '@/app/shared/utils/validation';
 
 /**
  * Mapper para convertir entre los datos de la API y el formulario de torneos
@@ -139,19 +140,15 @@ export class TournamentMapper extends BaseMapper<Torneo, TournamentForm> {
    * @param formData - Datos del formulario
    * @returns Resultado de la validación
    */
-  public validateFormData(formData: TournamentForm): { isValid: boolean; errors: string[] } {
+  public override validateFormData(formData: TournamentForm): ValidationResult {
     const result = super.validateFormData(formData);
 
     // Validación adicional de fechas específica para torneos
     if (formData.startDate && formData.endDate) {
-      const dateValidation = validateDateRange(formData.startDate, formData.endDate, {
-        minDuration: 60, // 1 hora mínima
-        requireFuture: true
-      });
-
+      const dateValidation = validateDateRange(formData.startDate, formData.endDate);
+      
       if (!dateValidation.isValid) {
         result.errors.push(dateValidation.error || 'Error en las fechas');
-        result.isValid = false;
       }
     }
 
@@ -164,14 +161,14 @@ export class TournamentMapper extends BaseMapper<Torneo, TournamentForm> {
    * @param additionalData - Datos adicionales (como imágenes en base64)
    * @returns Datos para enviar a la API
    */
-  public toApiData(formData: TournamentForm, additionalData?: Record<string, any>) {
+  public override toApiData(formData: TournamentForm, additionalData?: Record<string, any>) {
     const baseData = super.toApiData(formData, additionalData);
     
     // Agregar campos específicos de torneos
     return {
       ...baseData,
       MaxJugadores: formData.titulares + formData.suplentes,
-      Imagen: additionalData?.imageBase64 || null
+      Imagen: additionalData?.['imageBase64'] || null
     };
   }
 

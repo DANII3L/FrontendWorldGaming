@@ -29,13 +29,13 @@ interface AvailableGame {
 // Función para obtener todas las paletas
 const obtenerPaletas = async (): Promise<Paleta[]> => {
   const response: any = await apiService.get('PaletasJuego');
-  return response.data.listFind;
+  return Array.isArray(response.data) ? response.data : response.data?.listFind || [];
 };
 
 // Función para obtener una paleta por ID
 const obtenerPaletaPorId = async (id: number): Promise<Paleta> => {
   const response: any = await apiService.get(`PaletasJuego/${id}`);
-  return response.data.listFind;
+  return response.data;
 };
 
 // Función para crear una nueva paleta

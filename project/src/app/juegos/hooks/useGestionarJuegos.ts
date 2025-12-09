@@ -52,15 +52,17 @@ export const useGestionarJuegos = () => {
       // Usar buscarJuegos con parámetros vacíos para obtener todos los juegos
       const response = await buscarJuegos({}, normalizedPageNumber, normalizedPageSize);
       if (response.success) {
-        // Extraer datos de la nueva estructura
-        const gamesData = Array.isArray(response.data.listFind) ? response.data.listFind : [];
+        const gamesData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data?.listFind || [];
         setGames(gamesData);
 
         // Actualizar información de paginación
+        const paginationData = Array.isArray(response.data) ? response : response.data;
         setPaginationInfo({
-          totalRecords: response.data.totalRecords || 0,
-          pageNumber: (response.data.pageNumber && response.data.pageNumber > 0) ? response.data.pageNumber : defaults.pageNumber as number,
-          pageSize: (response.data.pageSize && response.data.pageSize > 0) ? response.data.pageSize : defaults.pageSize as number
+          totalRecords: paginationData?.totalRecords || 0,
+          pageNumber: (paginationData?.pageNumber && paginationData.pageNumber > 0) ? paginationData.pageNumber : defaults.pageNumber as number,
+          pageSize: (paginationData?.pageSize && paginationData.pageSize > 0) ? paginationData.pageSize : defaults.pageSize as number
         });
       } else {
         addNotification('Error al cargar los juegos: ' + response.message, 'error');
@@ -87,15 +89,17 @@ export const useGestionarJuegos = () => {
       const { pageNumber: normalizedPageNumber, pageSize: normalizedPageSize } = normalizeParams(pageNumber, pageSize);
       const response = await buscarJuegos(filters, normalizedPageNumber, normalizedPageSize);
       if (response.success) {
-        // Extraer datos de la nueva estructura
-        const gamesData = Array.isArray(response.data.listFind) ? response.data.listFind : [];
+        const gamesData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data?.listFind || [];
         setGames(gamesData);
 
         // Actualizar información de paginación
+        const paginationData = Array.isArray(response.data) ? response : response.data;
         setPaginationInfo({
-          totalRecords: response.data.totalRecords || 0,
-          pageNumber: (response.data.pageNumber && response.data.pageNumber > 0) ? response.data.pageNumber : defaults.pageNumber as number,
-          pageSize: (response.data.pageSize && response.data.pageSize > 0) ? response.data.pageSize : defaults.pageSize as number
+          totalRecords: paginationData?.totalRecords || 0,
+          pageNumber: (paginationData?.pageNumber && paginationData.pageNumber > 0) ? paginationData.pageNumber : defaults.pageNumber as number,
+          pageSize: (paginationData?.pageSize && paginationData.pageSize > 0) ? paginationData.pageSize : defaults.pageSize as number
         });
       } else {
         addNotification('Error en la búsqueda: ' + response.message, 'error');

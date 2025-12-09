@@ -148,14 +148,11 @@ export const useCrearTorneo = () => {
     });
   }, []);
 
-  // La función convertImageToBase64 ahora se importa de fileUtils
-
-  // Función para cargar un torneo existente usando el servicio dinámico
   const loadTournament = async (tournamentId: number) => {
     try {
       setLoadingTournament(true);
       setTournamentError(null);
-      // TODO: Reemplazar con React Query cuando esté configurado
+      
       const response = await apiService.get(`Torneos/${tournamentId}`);
       
       if (response.success && response.data) {

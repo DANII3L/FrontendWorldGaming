@@ -1,4 +1,4 @@
-import { ValidationResult, validateForm, CommonValidationRules } from '../utils';
+import { ValidationResult, CommonValidationRules } from '../utils';
 
 /**
  * Interfaz base para datos de API
@@ -138,13 +138,48 @@ export abstract class BaseMapper<TApiData extends BaseApiData, TFormData extends
    */
   public validateFormData(formData: TFormData): ValidationResult {
     const validationConfig = this.getValidationConfig();
-    const validationSchema: Record<string, any> = {};
+    const errors: string[] = [];
 
     validationConfig.forEach(({ field, rules }) => {
-      validationSchema[field] = rules;
+      const value = this.getNestedValue(formData, field);
+
+      // Validar requerido
+      if (rules.required && (value === undefined || value === null || value === '')) {
+        errors.push(`El campo ${field} es requerido`);
+        return;
+      }
+
+      // Si el campo está vacío y no es requerido, no validar más
+      if (!value && !rules.required) return;
+
+      // Validar minLength
+      if (rules.minLength && typeof value === 'string' && value.length < rules.minLength) {
+        errors.push(`El campo ${field} debe tener al menos ${rules.minLength} caracteres`);
+      }
+
+      // Validar maxLength
+      if (rules.maxLength && typeof value === 'string' && value.length > rules.maxLength) {
+        errors.push(`El campo ${field} no puede tener más de ${rules.maxLength} caracteres`);
+      }
+
+      // Validar pattern
+      if (rules.pattern && typeof value === 'string' && !rules.pattern.test(value)) {
+        errors.push(`El campo ${field} no cumple con el formato requerido`);
+      }
+
+      // Validar custom
+      if (rules.custom) {
+        const customResult = rules.custom(value);
+        if (customResult !== true) {
+          errors.push(typeof customResult === 'string' ? customResult : `El campo ${field} no es válido`);
+        }
+      }
     });
 
-    return validateForm(formData, validationSchema);
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
 
   /**
@@ -249,10 +284,6 @@ export abstract class BaseMapper<TApiData extends BaseApiData, TFormData extends
     required: CommonValidationRules.required,
     email: CommonValidationRules.email,
     password: CommonValidationRules.password,
-    phone: CommonValidationRules.phone,
-    url: CommonValidationRules.url,
-    positiveNumber: CommonValidationRules.positiveNumber,
-    nonNegativeNumber: CommonValidationRules.nonNegativeNumber,
     
     /**
      * Regla para nombre válido

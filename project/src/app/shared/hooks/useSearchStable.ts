@@ -95,12 +95,15 @@ export const useSearchStable = <T = any>(
       const response = await apiService.get(endpoint, params);
       
       if (response.success) {
-        const responseData = Array.isArray(response.data.listFind) ? response.data.listFind : [];
+        const responseData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data?.listFind || [];
         setData(responseData as T[]);
 
+        const paginationData = Array.isArray(response.data) ? response : response.data;
         setPaginationInfo({
-          totalRecords: response.data.totalRecords || 0,
-          pageNumber: (response.data.pageNumber && response.data.pageNumber > 0) ? response.data.pageNumber : defaults.pageNumber as number,
+          totalRecords: paginationData?.totalRecords || 0,
+          pageNumber: (paginationData?.pageNumber && paginationData.pageNumber > 0) ? paginationData.pageNumber : defaults.pageNumber as number,
           pageSize: pageSize || defaults.pageSize as number
         });
         

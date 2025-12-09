@@ -102,12 +102,7 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url = error.config?.url || '';
     
-    // Log de errores
-    console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${url} - ${status}`);
-    
-    // Manejar errores específicos
     if (status === 401) {
-      // No interceptar errores 401 en el endpoint de login
       if (!url.includes('Auth/login')) {
         handleUnauthorized();
       }
@@ -132,10 +127,7 @@ api.interceptors.response.use(
 // Función para normalizar la respuesta
 function normalizeResponse(response: any) {
   const status = response?.status ?? 200;
-  const responseData = response?.data; // El cuerpo de la respuesta HTTP (ya desenvuelto por axios)
-  
-  // Si la respuesta es paginada (tiene listFind en data.listFind)
-  // Estructura: { success: true, message: "...", data: { listFind: [...], totalRecords: ... } }
+  const responseData = response?.data;
   if (responseData?.data?.listFind && Array.isArray(responseData.data.listFind)) {
     return {
       data: responseData.data.listFind,
@@ -148,8 +140,6 @@ function normalizeResponse(response: any) {
     };
   }
   
-  // Si la respuesta tiene listFind directamente en data (sin anidar en data.data)
-  // Estructura: { listFind: [...], totalRecords: ... }
   if (responseData?.listFind && Array.isArray(responseData.listFind)) {
     return {
       data: responseData.listFind,
@@ -162,17 +152,29 @@ function normalizeResponse(response: any) {
     };
   }
   
-  // Si la respuesta tiene success/message en data (operaciones anidadas)
-  if (responseData?.success !== undefined || responseData?.message !== undefined) {
+  if ((responseData?.success !== undefined || responseData?.message !== undefined) && responseData?.data) {
+    // Si data contiene listFind, extraerlo
+    if (responseData.data.listFind && Array.isArray(responseData.data.listFind)) {
+      return {
+        data: responseData.data.listFind,
+        totalRecords: responseData.data.totalRecords,
+        pageNumber: responseData.data.pageNumber,
+        pageSize: responseData.data.pageSize,
+        message: responseData.message ?? 'Operación exitosa',
+        success: responseData.success ?? true,
+        status
+      };
+    }
+    // Si no tiene listFind pero tiene data, devolver data
     return {
-      data: responseData.data ?? responseData,
+      data: responseData.data,
       message: responseData.message ?? 'Operación exitosa',
       success: responseData.success ?? true,
       status
     };
   }
   
-  // Si la respuesta tiene success/message en nivel superior
+  // Si la respuesta tiene success/message en nivel superior (sin data anidado)
   if (responseData?.success !== undefined || responseData?.message !== undefined) {
     return {
       data: responseData.data ?? responseData,

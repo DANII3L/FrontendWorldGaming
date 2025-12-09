@@ -45,11 +45,16 @@ export const useCategories = () => {
       const response = await buscarCategorias({}, normalizedPageNumber, normalizedPageSize);
       
       if (response.success) {
-        setCategories(response.data.listFind as Categoria[]);
+        const categoriasData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data?.listFind || [];
+        setCategories(categoriasData as Categoria[]);
+        
+        const paginationData = Array.isArray(response.data) ? response : response.data;
         setPaginationInfo({
-          totalRecords: response.data.totalRecords,
-          pageNumber: response.data.pageNumber || defaults.pageNumber as number,
-          pageSize: response.data.pageSize || defaults.pageSize as number
+          totalRecords: paginationData?.totalRecords || 0,
+          pageNumber: paginationData?.pageNumber || defaults.pageNumber as number,
+          pageSize: paginationData?.pageSize || defaults.pageSize as number
         });
       } else {
         setCategories([]);
@@ -72,11 +77,16 @@ export const useCategories = () => {
       const response = await buscarCategorias(filters, normalizedPageNumber, normalizedPageSize);
       
       if (response.success) {
-        setCategories(response.data.listFind as Categoria[]);
+        const categoriasData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data?.listFind || [];
+        setCategories(categoriasData as Categoria[]);
+        
+        const paginationData = Array.isArray(response.data) ? response : response.data;
         setPaginationInfo({
-          totalRecords: response.data.totalRecords,
-          pageNumber: response.data.pageNumber || defaults.pageNumber as number,
-          pageSize: response.data.pageSize || defaults.pageSize as number
+          totalRecords: paginationData?.totalRecords || 0,
+          pageNumber: paginationData?.pageNumber || defaults.pageNumber as number,
+          pageSize: paginationData?.pageSize || defaults.pageSize as number
         });
       } else {
         setCategories([]);

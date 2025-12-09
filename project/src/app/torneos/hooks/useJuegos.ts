@@ -27,8 +27,9 @@ export const useJuegos = () => {
       const response = await buscarJuegos({ IsActive: true }, normalizedPageNumber, normalizedPageSize);
       
       if (response.success) {
-        // Extraer datos de la misma estructura que useGestionarJuegos
-        const juegosData = Array.isArray(response.data.listFind) ? response.data.listFind : [];
+        const juegosData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data?.listFind || [];
         setJuegos(juegosData);
       } else {
         const errorMessage = response.message || 'Error al cargar juegos';

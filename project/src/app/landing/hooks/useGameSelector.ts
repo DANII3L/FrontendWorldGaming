@@ -110,7 +110,9 @@ export const useGameSelector = (onPaletteUpdate?: (palette: ColorPalette) => voi
         });
 
         if (response.success) {
-          const juegosData = Array.isArray(response.data.listFind) ? response.data.listFind : [];
+          const juegosData = Array.isArray(response.data) 
+            ? response.data 
+            : response.data?.listFind || [];
 
           const gamesWithEmojis = juegosData.map((game: any) => ({
             ...game,
@@ -232,7 +234,9 @@ export const useGameSelector = (onPaletteUpdate?: (palette: ColorPalette) => voi
       });
 
       if (response.success) {
-        const juegosData = Array.isArray(response.data.listFind) ? response.data.listFind : [];
+        const juegosData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data?.listFind || [];
 
         const gamesWithEmojis = juegosData.map((game: any) => ({
           ...game,

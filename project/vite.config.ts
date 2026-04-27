@@ -31,8 +31,7 @@ export default defineConfig({
       'react-router-dom',
       'axios',
       'lucide-react'
-    ],
-    exclude: ['@gsap/react', '@react-three/drei', '@react-three/fiber']
+    ]
   },
 
   // Configuración de build
@@ -46,10 +45,8 @@ export default defineConfig({
           // Vendor chunks
           'react-vendor': ['react', 'react-dom'],
           'router-vendor': ['react-router-dom'],
-          'ui-vendor': ['lucide-react', '@headlessui/react'],
+          'ui-vendor': ['lucide-react'],
           'charts-vendor': ['recharts'],
-          'three-vendor': ['@react-three/drei', '@react-three/fiber'],
-          'gsap-vendor': ['gsap', '@gsap/react'],
           // App chunks
           'shared': [
             './src/app/shared/services/apiService.ts',
